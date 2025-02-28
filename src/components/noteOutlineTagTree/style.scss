@@ -14,7 +14,20 @@
   opacity: 1;
   //border: 1px dashed #000;
 }
+.css-1gly1zq-MuiTreeItem2-content.Mui-focused, .css-1gly1zq-MuiTreeItem2-content.Mui-selected, .css-1gly1zq-MuiTreeItem2-content.Mui-selected.Mui-focused{
+  background-color: #EFF0F0 !important;
+  font-weight: bold !important;
+  color: black !important;
+}
 
+.Mui-selected{
+  background-color: #EFF0F0 !important;
+  font-weight: bold !important;
+  color: black !important;
+}
+.css-cnvgiu-MuiTreeItem2-root:hover{
+  color: black;
+}
 .drop-border-top::before, .drop-border-top::after {
   content: '';
   position: absolute;

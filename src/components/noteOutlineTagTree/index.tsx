@@ -153,18 +153,12 @@ const tagTreeList = () => {
             },
         },
         "&:hover": {
-            backgroundColor: alpha(theme.palette.primary.main, 0.1),
-            color: "white",
-            ...theme.applyStyles("light", {
-                color: theme.palette.primary.main,
-            }),
+            backgroundColor: "#EFF0F0",
+            color: "black",
         },
         [`&.Mui-focused, &.Mui-selected, &.Mui-selected.Mui-focused`]: {
-            backgroundColor: theme.palette.primary.dark,
-            color: theme.palette.primary.contrastText,
-            ...theme.applyStyles("light", {
-                backgroundColor: theme.palette.primary.main,
-            }),
+            color: "black",
+            fontWeight: "bold"
         },
     }));
 

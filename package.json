@@ -15,6 +15,8 @@
   "scripts": {
     "dev": "pnpm react-devtools | vite",
     "build": "tsc && vite build && electron-builder",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "electron-builder install-app-deps",
     "preview": "vite preview",
     "pretest": "vite build --mode=test",
     "test": "vitest run"
@@ -47,6 +49,7 @@
     "@tiptap/starter-kit": "^2.11.5",
     "@types/lodash": "^4.17.15",
     "@types/react-beautiful-dnd": "^13.1.8",
+    "better-sqlite3": "^11.8.1",
     "electron": "^34.1.1",
     "electron-chrome-web-store": "^0.8.0",
     "electron-updater": "^6.3.9",
@@ -68,6 +71,7 @@
     "autoprefixer": "^10.4.20",
     "electron-builder": "^24.13.3",
     "electron-devtools-installer": "^4.0.0",
+    "electron-rebuild": "^3.2.9",
     "loadash": "^1.0.0",
     "postcss": "^8.4.49",
     "postcss-import": "^16.1.0",

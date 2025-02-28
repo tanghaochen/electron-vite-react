@@ -18,6 +18,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import InboxIcon from '@mui/icons-material/MoveToInbox';
 import MailIcon from '@mui/icons-material/Mail';
+import {db} from "@/database/db";
 
 const drawerWidth = 240;
 
@@ -92,6 +93,12 @@ export default function PersistentDrawerLeft() {
         setOpen(false);
     };
 
+    const handleItemClick = (e) => {
+        console.log('click')
+        db.createNoteSafe('test','contentttt')
+        // window.ipcRenderer.invoke('start-download')
+    }
+
     return (
         <Box sx={{display: 'flex'}}>
 
@@ -117,7 +124,7 @@ export default function PersistentDrawerLeft() {
                 <Divider/>
                 <List>
                     {['Inbox', 'Starred', 'Send email', 'Drafts'].map((text, index) => (
-                        <ListItem key={text} disablePadding>
+                        <ListItem key={text} disablePadding onClick={handleItemClick}>
                             <ListItemButton>
                                 <ListItemIcon>
                                     {index % 2 === 0 ? <InboxIcon/> :

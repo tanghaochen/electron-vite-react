@@ -11,6 +11,7 @@ import {
 } from "electron-devtools-installer";
 
 import {update} from "./update";
+import {initDatabase} from "../database/init";
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -149,10 +150,28 @@ function launchExtensionBackgroundWorkers(sessions = session.defaultSession) {
 
 // 添加错误处理
 app.whenReady().then(async () => {
+    const db = initDatabase()
+    // 暴露数据库操作接口
+// 主进程代码（如 electron-main.js）
+    ipcMain.handle('db:query', (event, sql, params) => {
+        try {
+            const stmt = db.prepare(sql);
+            const lowerSql = sql.toLowerCase();
+
+            // 检查是否为SELECT或包含RETURNING的INSERT/UPDATE/DELETE
+            if (lowerSql.startsWith('select') || lowerSql.includes('returning')) {
+                return stmt.all(params); // 返回所有结果行
+            } else {
+                const result = stmt.run(params); // 执行不返回数据的语句
+                return { lastInsertRowid: result.lastInsertRowid, changes: result.changes };
+            }
+        } catch (error) {
+            throw new Error(`Database Error: ${error.message}`);
+        }
+    });
+
+
     // 创建窗口
-    // await installExtension("fmkadmapgofadopljbjfkapdkoienihi");
-    // await updateExtensions();
-    // await launchExtensionBackgroundWorkers();
     installExtension(REACT_DEVELOPER_TOOLS)
         .then((ext) => console.log(`Added Extension:  ${ext.name}`))
         .catch((err) => console.log("An error occurred: ", err));

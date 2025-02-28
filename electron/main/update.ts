@@ -5,7 +5,8 @@ import type {
   UpdateDownloadedEvent,
   UpdateInfo,
 } from 'electron-updater'
-
+// sqlite.test.js
+// import { DatabaseSync } from 'node:sqlite'
 const { autoUpdater } = createRequire(import.meta.url)('electron-updater');
 
 export function update(win: Electron.BrowserWindow) {
@@ -42,21 +43,23 @@ export function update(win: Electron.BrowserWindow) {
 
   // Start downloading and feedback on progress
   ipcMain.handle('start-download', (event: Electron.IpcMainInvokeEvent) => {
-    startDownload(
-      (error, progressInfo) => {
-        if (error) {
-          // feedback download error message
-          event.sender.send('update-error', { message: error.message, error })
-        } else {
-          // feedback update progress message
-          event.sender.send('download-progress', progressInfo)
-        }
-      },
-      () => {
-        // feedback update downloaded message
-        event.sender.send('update-downloaded')
-      }
-    )
+    console.log('click')
+
+    // startDownload(
+    //   (error, progressInfo) => {
+    //     if (error) {
+    //       // feedback download error message
+    //       event.sender.send('update-error', { message: error.message, error })
+    //     } else {
+    //       // feedback update progress message
+    //       event.sender.send('download-progress', progressInfo)
+    //     }
+    //   },
+    //   () => {
+    //     // feedback update downloaded message
+    //     event.sender.send('update-downloaded')
+    //   }
+    // )
   })
 
   // Install now

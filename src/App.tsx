@@ -12,7 +12,8 @@ function App() {
                 <div className='flex'>
                     <div className="h-full bg-white" style={{
                         zIndex: 9999,
-                        borderRight: '1px solid rgba(0, 0, 0, 0.12)'
+                        borderRight: '1px solid rgba(0, 0, 0, 0.12)',
+                        backgroundColor:'#FAFAFA'
                     }}>
                         <NoteContent></NoteContent>
                         <NoteOutlineTree></NoteOutlineTree>
