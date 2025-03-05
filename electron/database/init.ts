@@ -47,6 +47,7 @@ export function initDatabase() {
 function executeMigrations() {
     const expectedTables = [
         'schema_version',
+        'categories',
         'tags',
         'tag_closure',
         'notes_metadata',
@@ -64,80 +65,151 @@ function executeMigrations() {
 
         if (!hasSchemaVersion) {
             console.log('执行初始迁移...');
+
+            // 创建基础表结构
             dbInstance.exec(`
-        CREATE TABLE schema_version (
-          version INTEGER PRIMARY KEY
-        );
+                CREATE TABLE schema_version (
+                    version INTEGER PRIMARY KEY
+                );
 
-        CREATE TABLE tags (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          parent_id INTEGER DEFAULT 0,
-          name TEXT NOT NULL,
-          color TEXT DEFAULT '#3498db',
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          UNIQUE(name, parent_id)
-        );
+                CREATE TABLE categories (
+                    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                    uuid       TEXT NOT NULL UNIQUE DEFAULT (LOWER(HEX(RANDOMBLOB(16)))),
+                    name       TEXT NOT NULL UNIQUE,
+                    icon       TEXT NOT NULL DEFAULT 'folder',
+                    color      TEXT DEFAULT '#3498db',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
 
-        CREATE TABLE tag_closure (
-          ancestor INTEGER NOT NULL,
-          descendant INTEGER NOT NULL,
-          depth INTEGER NOT NULL,
-          PRIMARY KEY (ancestor, descendant),
-          FOREIGN KEY(ancestor) REFERENCES tags(id),
-          FOREIGN KEY(descendant) REFERENCES tags(id)
-        );
+                CREATE TABLE tags (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    uuid        TEXT NOT NULL UNIQUE DEFAULT (LOWER(HEX(RANDOMBLOB(16)))),
+                    category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+                    parent_id   INTEGER DEFAULT 0,
+                    name        TEXT NOT NULL DEFAULT '',
+                    label       TEXT NOT NULL DEFAULT '',
+                    icon        TEXT NOT NULL DEFAULT 'tag',
+                    color       TEXT DEFAULT '#3498db',
+                    lft INTEGER DEFAULT 0,  -- 左边界
+                    rgt INTEGER DEFAULT 0,   -- 右边界
+                    sort_order INTEGER DEFAULT 0,  -- 新增排序字段
+                        created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
 
-        CREATE TABLE notes_metadata (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          title TEXT NOT NULL,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          is_pinned BOOLEAN DEFAULT 0
-        );
 
-        CREATE TABLE notes_content (
-          note_id INTEGER PRIMARY KEY,
-          content TEXT NOT NULL,
-          FOREIGN KEY(note_id) REFERENCES notes_metadata(id)
-        );
+                CREATE TABLE tag_closure (
+                    ancestor    INTEGER NOT NULL,
+                    descendant  INTEGER NOT NULL,
+                    depth       INTEGER NOT NULL DEFAULT 0,
+                    category_id INTEGER NOT NULL,
+                    PRIMARY KEY (ancestor, descendant),
+                    FOREIGN KEY (ancestor) REFERENCES tags(id) ON DELETE CASCADE,
+                    FOREIGN KEY (descendant) REFERENCES tags(id) ON DELETE CASCADE,
+                    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+                );
 
-        CREATE TABLE note_tags (
-          note_id INTEGER NOT NULL,
-          tag_id INTEGER NOT NULL,
-          PRIMARY KEY (note_id, tag_id),
-          FOREIGN KEY(note_id) REFERENCES notes_metadata(id) ON DELETE CASCADE,
-          FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE CASCADE
-        );
+                CREATE TABLE notes_metadata (
+                    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title      TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    is_pinned  BOOLEAN DEFAULT 0
+                );
 
-        CREATE VIRTUAL TABLE notes_fts USING fts5(
-          title,
-          content,
-          content_rowid='note_id'
-        );
+                CREATE TABLE notes_content (
+                    note_id INTEGER PRIMARY KEY,
+                    content TEXT NOT NULL,
+                    FOREIGN KEY (note_id) REFERENCES notes_metadata(id)
+                );
 
-        INSERT INTO schema_version (version) VALUES (1);
-      `);
+                CREATE TABLE note_tags (
+                    note_id INTEGER NOT NULL,
+                    tag_id  INTEGER NOT NULL,
+                    PRIMARY KEY (note_id, tag_id),
+                    FOREIGN KEY (note_id) REFERENCES notes_metadata(id) ON DELETE CASCADE,
+                    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+                );
+
+                CREATE VIRTUAL TABLE notes_fts USING fts5(
+                    title,
+                    content,
+                    content_rowid='note_id'
+                );
+
+                INSERT INTO schema_version (version) VALUES (1);
+            `);
+
+            // 创建验证触发器
+            dbInstance.exec(`
+                -- 标签表父标签验证触发器
+                CREATE TRIGGER validate_tag_parent BEFORE INSERT ON tags
+                BEGIN
+                    SELECT
+                        CASE
+                            WHEN NEW.parent_id != 0 AND NOT EXISTS (
+                                SELECT 1 FROM tags 
+                                WHERE id = NEW.parent_id 
+                                AND category_id = NEW.category_id
+                            )
+                            THEN RAISE(ABORT, 'Parent tag must belong to the same category')
+                        END;
+                END;
+
+                CREATE TRIGGER validate_tag_parent_update BEFORE UPDATE ON tags
+                BEGIN
+                    SELECT
+                        CASE
+                            WHEN NEW.parent_id != 0 AND NOT EXISTS (
+                                SELECT 1 FROM tags 
+                                WHERE id = NEW.parent_id 
+                                AND category_id = NEW.category_id
+                            )
+                            THEN RAISE(ABORT, 'Parent tag must belong to the same category')
+                        END;
+                END;
+
+                -- 闭包表分类验证触发器
+                CREATE TRIGGER validate_closure_category BEFORE INSERT ON tag_closure
+                BEGIN
+                    SELECT
+                        CASE
+                            WHEN (SELECT category_id FROM tags WHERE id = NEW.ancestor) != NEW.category_id
+                                OR (SELECT category_id FROM tags WHERE id = NEW.descendant) != NEW.category_id
+                            THEN RAISE(ABORT, 'Closure record must belong to the same category')
+                        END;
+                END;
+            `);
+
+            // 创建索引
+            dbInstance.exec(`
+                CREATE INDEX idx_tag_category ON tags(category_id);
+                CREATE INDEX idx_closure_category ON tag_closure(category_id);
+            `);
 
             // 插入测试数据
             dbInstance.exec(`
-        INSERT INTO tags (name, parent_id) VALUES 
-          ('语言学习', 0),
-          ('英语', 1),
-          ('日语', 1);
-          
-        INSERT INTO tag_closure (ancestor, descendant, depth) VALUES
-          (1,1,0),
-          (1,2,1),
-          (1,3,1),
-          (2,2,0),
-          (3,3,0);
-      `);
+                INSERT INTO categories (name) VALUES ('默认分类');
+                
+                INSERT INTO tags (category_id, label, parent_id, sort_order) VALUES 
+                    (1, '语言学习', 0,1000),
+                    (1, '英语', 1,2000),
+                    (1, '日语', 1,1000);
+                
+                INSERT INTO tag_closure (ancestor, descendant, depth, category_id) VALUES
+                    (1, 1, 0, 1),
+                    (1, 2, 1, 1),
+                    (1, 3, 1, 1),
+                    (2, 2, 0, 1),
+                    (3, 3, 0, 1);
+            `);
         } else {
             console.log('检测到已有数据库，跳过初始迁移');
         }
     })();
 }
+
 
 function verifyTables() {
     console.log('验证表结构...');

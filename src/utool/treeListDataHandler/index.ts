@@ -1,4 +1,28 @@
 export class treeList {
+
+
+    // 高性能版本（O(n)复杂度）
+    static aryToTree(items) {
+        const map = {};
+        const roots = [];
+
+        // 创建哈希映射
+        items.forEach(item => {
+            map[item.id] = { ...item, children: [] };
+        });
+
+        // 构建树
+        items.forEach(item => {
+            if (item.parent_id !== 0 && map[item.parent_id]) {
+                map[item.parent_id].children.push(map[item.id]);
+            } else {
+                roots.push(map[item.id]);
+            }
+        });
+
+        return roots;
+    }
+
     /**
      * @param treeData: 树形数据结构
      * @param newNode: 新节点

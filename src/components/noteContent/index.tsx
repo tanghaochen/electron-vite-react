@@ -36,7 +36,6 @@ export default function FreeSolo({title, onFileSearch}) {
     };
 
     return (
-        <Stack spacing={2} sx={{width: 300}}>
             <Autocomplete
                 freeSolo
                 id="free-solo-2-demo"
@@ -61,7 +60,6 @@ export default function FreeSolo({title, onFileSearch}) {
                     </div>
                 )}
             />
-        </Stack>
     );
 }
 

@@ -19,6 +19,7 @@ import ListItemText from '@mui/material/ListItemText';
 import InboxIcon from '@mui/icons-material/MoveToInbox';
 import MailIcon from '@mui/icons-material/Mail';
 import {db} from "@/database/db";
+import {tagsdb} from "@/database/tagsdb";
 
 const drawerWidth = 240;
 
@@ -93,15 +94,20 @@ export default function PersistentDrawerLeft() {
         setOpen(false);
     };
 
-    const handleItemClick = (e) => {
+    const handleItemClick = async (e) => {
         console.log('click')
-        db.createNoteSafe('test','contentttt')
-        // window.ipcRenderer.invoke('start-download')
+        // db.createNoteSafe('test','contentttt')
+        // const getAllTags = await tagsdb.getTagById(1)  // 参数都应该是数字
+        // console.log('getAllTags', getAllTags)
+        // 正确调用方式
+        tagsdb.createTag(1, '前端框架', 0)  // 参数都应该是数字
+            .then(id => console.log('创建成功，新标签ID:', id))
+            .catch(err => console.error('创建失败:', err));
+
     }
 
     return (
         <Box sx={{display: 'flex'}}>
-
             <Drawer
                 sx={{
                     width: drawerWidth,
@@ -109,6 +115,7 @@ export default function PersistentDrawerLeft() {
                     '& .MuiDrawer-paper': {
                         width: drawerWidth,
                         boxSizing: 'border-box',
+                        position:'relative'
                     },
                 }}
                 variant="persistent"

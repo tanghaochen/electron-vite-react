@@ -45,6 +45,12 @@ import {
 import "./style.scss";
 import ContextMenu from "./contextMenu";
 import {treeList} from "@/utool/treeListDataHandler";
+import {tagsdb} from "@/database/tagsdb";
+import Stack from "@mui/material/Stack";
+import {IconButton} from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import WordsBar from "@/components/wordsBar";
+import CustomLabel from "@/components/noteOutlineTagTree/subComponents";
 
 type FileType =
     | "image"
@@ -66,6 +72,7 @@ declare module "react" {
         "--tree-view-bg-color"?: string;
     }
 }
+let dragEnterItemInfo = {}
 const tagTreeList = () => {
     const ITEMS: TreeViewBaseItem<ExtendedTreeItemProps>[] = [
         {
@@ -105,13 +112,45 @@ const tagTreeList = () => {
         {id: "3", label: "History", fileType: "folder"},
         {id: "4", label: "Trash", fileType: "trash"},
     ];
+
     const [items, setItems] =
         useState<TreeViewBaseItem<ExtendedTreeItemProps>[]>(ITEMS);
+    // 被右键点击到的item的id
     const [contextID, setContextID] = useState("-1");
+    const [selectedItem, setSelectedItem] = useState({})
     const [selectedItemId, setSelectedItemId] = useState(null); // For storing the selected item ID
-
     const [dragStartIDRecording, setDragStartIDRecording] = useState("-1");
     const [dragEndIDRecording, setDragEndIDRecording] = useState("-1");
+
+    const sortItems = (items: TreeViewBaseItem<ExtendedTreeItemProps>[]): TreeViewBaseItem<ExtendedTreeItemProps>[] => {
+        // 对当前层级的项目按 sort_order 升序排序
+        const sortedItems = [...items].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+        // 递归排序每个项目的子节点
+        return sortedItems.map(item => ({
+            ...item,
+            children: item.children ? sortItems(item.children) : undefined,
+        }));
+    };
+
+    useEffect(() => {
+        // 在useEffect内部定义异步函数
+        const fetchData = async () => {
+            try {
+                const getTreeData = await tagsdb.getTagsByCategory(1);
+                console.log('getTreeData', getTreeData);
+                const res = treeList.aryToTree(getTreeData)
+                const sortedRes = sortItems(res); // 应用排序
+
+                console.log('res', sortedRes)
+                setItems(sortedRes);
+            } catch (error) {
+                console.error('数据获取失败:', error);
+            }
+        };
+        // 立即执行异步函数
+        fetchData();
+    }, []); // 确保依赖数组正确
+
 
     const StyledTreeItemRoot = styled(TreeItem2Root)(({theme}) => ({
         color: theme.palette.grey[400],
@@ -178,118 +217,9 @@ const tagTreeList = () => {
     const StyledTreeItemLabelText = styled(Typography)({
         color: "inherit",
         fontFamily: "General Sans",
+        width:'100%',
         fontWeight: 500,
     }) as unknown as typeof Typography;
-
-    interface CustomLabelProps {
-        children: React.ReactNode;
-        icon?: React.ElementType;
-        expandable?: boolean;
-        itemId?: number;
-    }
-
-    function CustomLabel({
-                             icon: Icon,
-                             expandable,
-                             children,
-                             itemId,
-                             ...other
-                         }: CustomLabelProps) {
-        const inputRef = React.useRef(null);
-        const [inputValue, setInputValue] = useState("");
-        useEffect(() => {
-            if (itemId === selectedItemId) {
-                setTimeout(() => {
-                    if (inputRef.current) {
-                        inputRef.current.focus();
-                        setInputValue(children);
-                    }
-                }, 0);
-            }
-        }, [selectedItemId]);
-
-        const handleClick = () => {
-            // 聚焦输入框
-            if (inputRef.current) {
-                inputRef.current.focus();
-            }
-        };
-
-        const updateTreeItemLabel = (items, itemId, newLabel) => {
-            return treeList.updateById(items, itemId, {label: newLabel});
-
-            return items.map((item) => {
-                if (item.id === itemId) {
-                    return {...item, label: newLabel};
-                } else if (item.children) {
-                    return {
-                        ...item,
-                        children: updateTreeItemLabel(item.children, itemId, newLabel),
-                    };
-                }
-                return item;
-            });
-        };
-
-        const handleInputBlur = (e) => {
-            setItems((prevItems) =>
-                updateTreeItemLabel(prevItems, selectedItemId, inputValue),
-            );
-            setSelectedItemId("-1");
-        };
-
-        return (
-            <TreeItem2Label
-                {...other}
-                sx={{
-                    display: "flex",
-                    alignItems: "center",
-                }}
-                onClick={handleClick}
-            >
-                {/*{Icon && (*/}
-                {/*    <Box*/}
-                {/*        component={Icon}*/}
-                {/*        className="labelIcon"*/}
-                {/*        color="inherit"*/}
-                {/*        sx={{mr: 1, fontSize: '1.2rem'}}*/}
-                {/*    />*/}
-                {/*)}*/}
-
-                {itemId != selectedItemId && (
-                    <StyledTreeItemLabelText variant="body2">
-                        {children}-{itemId}
-                    </StyledTreeItemLabelText>
-                )}
-
-                {/* 条件渲染 input 元素 */}
-                {itemId === selectedItemId && (
-                    <input
-                        ref={inputRef}
-                        type="text"
-                        className="pointer-events-none w-full"
-                        id="name"
-                        name="name"
-                        onBlur={handleInputBlur}
-                        required
-                        value={inputValue} // 绑定值
-                        onKeyDown={(e) => {
-                            e.stopPropagation(); // 阻止事件冒泡
-                            if (e.key === "Enter") {
-                                e.target.blur(); // Remove focus from the input when Enter is pressed
-                            }
-                        }}
-                        onChange={(e) => {
-                            setInputValue(e.target.value);
-                        }} // 更新值
-                        minLength="1"
-                        maxLength="30"
-                        size="10"
-                    />
-                )}
-            </TreeItem2Label>
-        );
-    }
 
     const isExpandable = (reactChildren: React.ReactNode) => {
         if (Array.isArray(reactChildren)) {
@@ -344,6 +274,7 @@ const tagTreeList = () => {
             id,
             itemId,
             label,
+            parent_id,
             disabled,
             children,
             dragEnterItemID,
@@ -353,7 +284,6 @@ const tagTreeList = () => {
             setContextMenu,
             ...other
         } = props;
-
         const {
             getRootProps,
             getContentProps,
@@ -365,7 +295,6 @@ const tagTreeList = () => {
             status,
             publicAPI,
         } = useTreeItem2({id, itemId, children, label, disabled, rootRef: ref});
-
         const item = publicAPI.getItem(itemId);
         const expandable = isExpandable(children);
         let icon;
@@ -394,13 +323,14 @@ const tagTreeList = () => {
                 const {pageY: mouseY} = e;
                 const DISTANCE = 8;
                 // 判断鼠标在目标元素的哪个位置：上、中、下
-                if (
-                    mouseY > dropRect.top - DISTANCE &&
-                    mouseY < dropRect.top + DISTANCE
-                ) {
-                    console.log("top");
-                    if (dragStyle !== "top") setDragStyle("top");
-                } else if (
+                // if (
+                //     mouseY > dropRect.top - DISTANCE &&
+                //     mouseY < dropRect.top + DISTANCE
+                // ) {
+                //     console.log("top");
+                //     if (dragStyle !== "top") setDragStyle("top");
+                // } else
+                    if (
                     mouseY > dropRect.top + DISTANCE &&
                     mouseY < dropRect.top + dropRect.height - DISTANCE
                 ) {
@@ -427,20 +357,24 @@ const tagTreeList = () => {
 
         const handleItemDragEnter = (e, itemID) => {
             setDragEndIDRecording(itemID);
+            setSelectedItem(item)
+            dragEnterItemInfo= item
         };
 
         const handleItemDragLeave = (e) => {
         };
 
-        const handleItemDrop = (e) => {
+        const handleItemDrop =async (e) => {
             e.preventDefault();
             setDragEnterItemID("-1");
             setDragStyle("none");
+            setItems(treeList.removeById(items, dragStartIDRecording));
+
             // 获取拖拽开始和放下的id
             const startDataList = window.structuredClone(
                 treeList.findById(items, dragStartIDRecording),
             );
-            setItems(treeList.removeById(items, dragStartIDRecording));
+            startDataList.dbID = startDataList.id
 
             // Check if startDataList is valid
             if (!startDataList) {
@@ -451,12 +385,6 @@ const tagTreeList = () => {
                 return;
             }
 
-            // Generate a new unique ID for the item being inserted to prevent duplicate ID
-            const newItemID = nanoid(); // Use nanoid to generate a unique ID
-
-            // Update the cloned item with the new unique ID
-            startDataList.id = newItemID;
-
             // Prepare the position object based on the drag style
             const positionObj = {
                 top: "before",
@@ -464,18 +392,32 @@ const tagTreeList = () => {
                 bottom: "after",
             };
 
-            // Insert the node with the new ID
-            setItems((prevItems) => {
-                const updatedItems = treeList.insertNode(prevItems, startDataList, {
-                    id: dragEndIDRecording,
-                    location: positionObj[dragStyle],
-                });
-                return updatedItems;
-            });
+            // 解决了放在before位置的存储功能
+            // const sortIndex=await tagsdb.calculateSortOrder(selectedItem.parent_id, selectedItem.id)
+            // console.log('sortIndex', sortIndex,dragStyle)
+            // console.log('startDataList', startDataList,selectedItem)
+            // // 开始拖动的item的parentID为拖拽结束的tiem的id
+            // tagsdb.updateTag(startDataList.dbID, {
+            //     parent_id: selectedItem.parent_id,
+            //     sort_order: sortIndex
+            // })
+         setTimeout(() => {
+
+             // Insert the node with the new ID
+             setItems((prevItems) => {
+
+                 const updatedItems = treeList.insertNode(prevItems, startDataList, {
+                     id: dragEndIDRecording,
+                     location: positionObj[dragStyle],
+                 });
+                 return updatedItems;
+             });
+         },50)
         };
 
-        const onContextMenu = (e, itemId) => {
+        const onContextMenu = (e, itemId,pID) => {
             e.stopPropagation();
+            setSelectedItem(item)
             setContextID(itemId);
             setContextMenu({
                 mouseX: e.clientX + 2,
@@ -484,14 +426,16 @@ const tagTreeList = () => {
         };
 
         return (
-            <TreeItem2Provider itemId={itemId}>
+            <TreeItem2Provider
+                itemId={itemId} // Add this line to provide the required itemId prop
+            >
                 <StyledTreeItemRoot
                     onContextMenu={(e) => {
-                        onContextMenu(e, itemId);
+                        onContextMenu(e, itemId,parent_id);
                     }}
-                    className={`${
-                        itemId == dragEnterItemID ? `drop-border-${dragStyle}` : ""
-                    }`}
+                    // className={`${
+                    //     itemId == dragEnterItemID ? `drop-border-${dragStyle}` : ""
+                    // }`}
                     {...getRootProps(other)}
                 >
                     <CustomTreeItemContent
@@ -528,9 +472,14 @@ const tagTreeList = () => {
                                 expandable: expandable && status.expanded,
                             })}
                             itemId={itemId}
+                            selectedItem={selectedItem}
+                            selectedItemId={selectedItemId}
+                            setItems={setItems}
+                            setSelectedItemId={setSelectedItemId}
                         />
                         {/*<TreeItem2DragAndDropOverlay {...getDragAndDropOverlayProps()} />*/}
                     </CustomTreeItemContent>
+                    {/*{itemId == dragEnterItemID && '111'}*/}
                     {children &&
                         <TransitionComponent {...getGroupTransitionProps()} />}
                 </StyledTreeItemRoot>
@@ -552,8 +501,8 @@ const tagTreeList = () => {
         const handleCloseMenu = () => {
             setContextMenu(null);
         };
-
-        const handleAddItem = () => {
+        // 第一层级新增放在最后，嵌套层级点击新增放在嵌套数组的最后
+        const handleAddItem =async () => {
             handleCloseMenu();
             const newItemID = nanoid();
             setItems(
@@ -567,6 +516,7 @@ const tagTreeList = () => {
                 ),
             );
             setSelectedItemId(newItemID);
+            tagsdb.createTag(1,'未命名', selectedItem.parent_id)
         };
 
         const handleEditItem = (e) => {
@@ -579,6 +529,8 @@ const tagTreeList = () => {
             // Handle deleting the selected item
             handleCloseMenu();
             setItems(treeList.removeById(items, contextID));
+            console.log('handleEditItem', handleEditItem)
+            tagsdb.deleteTag(selectedItem.id)
         };
 
         const handleFindItem = () => {
@@ -587,41 +539,67 @@ const tagTreeList = () => {
             handleCloseMenu();
         };
 
+        const handleHeaderAddBtn = (e) => {
+            e.stopPropagation()
+            // tagsdb.createTag()
+            console.log('handleHeaderAddBtn')
+        }
+const handleRichTree = (e) => {
+    e.preventDefault()
+    console.log('===================')
+}
         return (
-            <div>
-                <RichTreeView
-                    items={items}
-                    defaultExpandedItems={["1"]}
-                    defaultSelectedItems="11"
-                    sx={{
-                        height: "fit-content",
-                        flexGrow: 1,
-                        maxWidth: 400,
-                        overflowY: "auto",
-                    }}
-                    slots={{
-                        item: (props) => (
-                            <CustomTreeItem
-                                {...props}
-                                ref={richTreeRef}
-                                dragEnterItemID={dragEnterItemID}
-                                dragStyle={dragStyle}
-                                setContextMenu={setContextMenu}
-                                setDragEnterItemID={setDragEnterItemID}
-                                setDragStyle={setDragStyle}
-                            />
-                        ),
-                    }}
-                ></RichTreeView>
-                <ContextMenu
-                    onClose={handleCloseMenu}
-                    onEdit={handleEditItem}
-                    onDelete={handleDeleteItem}
-                    onAdd={handleAddItem}
-                    onFind={handleFindItem}
-                    contextMenu={contextMenu}
-                />
-            </div>
+                <Stack className="h-full bg-white" style={{
+                    // zIndex: 9999,
+                    width:'300px',
+                    borderRight: '1px solid rgba(0, 0, 0, 0.12)',
+                    backgroundColor:'#FAFAFA'
+                }}>
+                    <div className='silder-header flex justify-between items-center p-1'>
+                        <div style={{fontSize: '0.8rem',color:'#91918E'}}>分类</div>
+                        <IconButton aria-label="add" size="small" className='h-fit' onClick={handleHeaderAddBtn}>
+                            <AddIcon fontSize={'small'} color={'#91918E'}/>
+                        </IconButton >
+                    </div>
+                    {/*<NoteContent></NoteContent>*/}
+                    <RichTreeView
+                        items={items}
+                        defaultExpandedItems={["1"]}
+                        defaultSelectedItems="11"
+                        onDragOver={handleRichTree}
+                        className='border border-solid'
+                        role='debug-最外层html-ul'
+                        sx={{
+                            height: "fit-content",
+                            flexGrow: 1,
+                            maxWidth: 400,
+                            overflowY: "auto",
+                        }}
+                        slots={{
+                            item: (props) => {
+                                return (
+                                    <CustomTreeItem
+                                        {...props}
+                                        ref={richTreeRef}
+                                        dragEnterItemID={dragEnterItemID}
+                                        dragStyle={dragStyle}
+                                        setContextMenu={setContextMenu}
+                                        setDragEnterItemID={setDragEnterItemID}
+                                        setDragStyle={setDragStyle}
+                                    />
+                                )
+                            },
+                        }}
+                    ></RichTreeView>
+                    <ContextMenu
+                        onClose={handleCloseMenu}
+                        onEdit={handleEditItem}
+                        onDelete={handleDeleteItem}
+                        onAdd={handleAddItem}
+                        onFind={handleFindItem}
+                        contextMenu={contextMenu}
+                    />
+                </Stack>
         );
     };
 

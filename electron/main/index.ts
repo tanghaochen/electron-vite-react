@@ -153,22 +153,26 @@ app.whenReady().then(async () => {
     const db = initDatabase()
     // 暴露数据库操作接口
 // 主进程代码（如 electron-main.js）
-    ipcMain.handle('db:query', (event, sql, params) => {
+// electron-main/db.js
+    ipcMain.handle('db:query', async (_, sql, params) => {
         try {
             const stmt = db.prepare(sql);
-            const lowerSql = sql.toLowerCase();
 
-            // 检查是否为SELECT或包含RETURNING的INSERT/UPDATE/DELETE
-            if (lowerSql.startsWith('select') || lowerSql.includes('returning')) {
-                return stmt.all(params); // 返回所有结果行
+            if (sql.trim().toUpperCase().startsWith('SELECT')) {
+                return stmt.all(params);
             } else {
-                const result = stmt.run(params); // 执行不返回数据的语句
-                return { lastInsertRowid: result.lastInsertRowid, changes: result.changes };
+                const result = stmt.run(params);
+                return {
+                    lastInsertRowid: result.lastInsertRowid,
+                    changes: result.changes
+                };
             }
-        } catch (error) {
-            throw new Error(`Database Error: ${error.message}`);
+        } catch (err) {
+            console.error('Database Error:', err.message);
+            throw new Error(`Database Error: ${err.message}`);
         }
     });
+
 
 
     // 创建窗口

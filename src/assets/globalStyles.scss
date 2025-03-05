@@ -1,0 +1,9 @@
+.silder-header{
+  border-radius: 0.5rem;
+  &:hover{
+    background-color: #EFF0F0;
+  }
+  &:active{
+    background-color: #D9D9D7;
+  }
+}

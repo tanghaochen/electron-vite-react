@@ -3,21 +3,18 @@ import NoteContent from "./components/noteContent";
 import NoteContentOutline from "./components/noteContentOutline";
 import NoteOutlineTree from "./components/noteOutlineTagTree";
 import WordsBar from '@/components/wordsBar'
-
+import {IconButton, ListSubheader} from "@mui/material";
+import Button from "@mui/material/Button";
+import AddIcon from '@mui/icons-material/Add';
+import Stack from "@mui/material/Stack";
+import "@/assets/globalStyles.scss"
 function App() {
     const [count, setCount] = useState(0);
     return (
         <div className="App w-full">
             <div className="flex w-full">
                 <div className='flex'>
-                    <div className="h-full bg-white" style={{
-                        zIndex: 9999,
-                        borderRight: '1px solid rgba(0, 0, 0, 0.12)',
-                        backgroundColor:'#FAFAFA'
-                    }}>
-                        <NoteContent></NoteContent>
-                        <NoteOutlineTree></NoteOutlineTree>
-                    </div>
+                    <NoteOutlineTree></NoteOutlineTree>
                     <WordsBar/>
                 </div>
                 <NoteContentOutline></NoteContentOutline>

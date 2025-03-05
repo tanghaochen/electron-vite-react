@@ -9,7 +9,6 @@
   -1px 0 0 0 rgba(0, 0, 0, 0.1); /* 左边 */
 }
 
-
 .drag-start-element {
   opacity: 1;
   //border: 1px dashed #000;
@@ -38,7 +37,7 @@
   top: 0;
   left: 0;
   right: 0;
-  height: .2rem; /* 上边框 */
+  height: .4rem; /* 上边框 */
 }
 
 .drop-border-bottom::before, .drop-border-bottom::after {
@@ -52,7 +51,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: .2rem; /* 下边框 */
+    height: .4rem; /* 下边框 */
   }
 }
 
