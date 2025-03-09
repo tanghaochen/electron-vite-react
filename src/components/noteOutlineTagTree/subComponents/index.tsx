@@ -1,15 +1,8 @@
-import {tagsdb} from "@/database/tagsdb";
-import {treeList} from "@/utool/treeListDataHandler";
-import {styled, Typography} from "@mui/material";
-import * as React from "react";
-import {useEffect} from "react";
-import {
-    TreeItem2Checkbox,
-    TreeItem2Content,
-    TreeItem2IconContainer,
-    TreeItem2Label,
-    TreeItem2Root,
-} from "@mui/x-tree-view/TreeItem2";
+import { tagsdb } from "@/database/tagsdb";
+import { treeList } from "@/utool/treeListDataHandler";
+import { styled, Typography } from "@mui/material";
+import React from "react";
+import { TreeItem2Label } from "@mui/x-tree-view/TreeItem2";
 
 const StyledTreeItemLabelText = styled(Typography)({
     color: "inherit",
@@ -20,123 +13,122 @@ const StyledTreeItemLabelText = styled(Typography)({
 
 interface CustomLabelProps {
     children: React.ReactNode;
-    icon?: React.ElementType;
-    expandable?: boolean;
-    itemId?: number;
+    itemId?: string;
+    selectedItem?: any;
+    selectedItemId?: string | null;
+    setItems: React.Dispatch<React.SetStateAction<any[]>>;
+    setSelectedItemId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
+// 优化点 1: 使用 React.memo 包裹组件
+const CustomLabel = React.memo(
+    ({
+         children,
+         itemId,
+         selectedItem,
+         selectedItemId,
+         setItems,
+         setSelectedItemId,
+     }: CustomLabelProps) => {
+        const inputRef = React.useRef<HTMLInputElement>(null);
+        const [inputValue, setInputValue] = React.useState("");
 
-export default function CustomLabel({
-                                        icon: Icon,
-                                        expandable,
-                                        children,
-                                        itemId,
-                                        selectedItem,
-                                        selectedItemId,
-                                        setItems,
-                                        setSelectedItemId,
-                                        ...other
-                                    }) {
-    const inputRef = React.useRef(null);
-    const [inputValue, setInputValue] = React.useState("");
-    useEffect(() => {
-        if (itemId === selectedItemId) {
-            setTimeout(() => {
-                if (inputRef.current) {
-                    inputRef.current.focus();
-                    setInputValue(children);
-                }
-            }, 0);
-        }
-    }, [selectedItemId]);
+        // 优化点 2: 使用 useCallback 缓存回调函数
+        const updateTreeItemLabel = React.useCallback(
+            (items: any[], targetId: string, newLabel: string) => {
+                return treeList.updateById(items, targetId, { label: newLabel });
+            },
+            []
+        );
 
-    const handleClick = () => {
-        // 聚焦输入框
-        if (inputRef.current) {
-            inputRef.current.focus();
-        }
-    };
+        // 优化点 3: 使用 useEffect 的 cleanup 函数管理状态
+        React.useEffect(() => {
+            if (itemId === selectedItemId && inputRef.current) {
+                const inputElement = inputRef.current;
+                inputElement.focus();
+                setInputValue(children as string);
 
-    const updateTreeItemLabel = (items, itemId, newLabel) => {
-        return treeList.updateById(items, itemId, {label: newLabel});
-
-        return items.map((item) => {
-            if (item.id === itemId) {
-                return {...item, label: newLabel};
-            } else if (item.children) {
-                return {
-                    ...item,
-                    children: updateTreeItemLabel(item.children, itemId, newLabel),
+                // 添加清理函数
+                return () => {
+                    setInputValue("");
                 };
             }
-            return item;
-        });
-    };
+        }, [selectedItemId, itemId, children]);
 
-    const handleInputBlur = (e) => {
-        console.log('handleInputBlur', selectedItem)
-        selectedItem.dbID = selectedItem.id
-        tagsdb.updateTag(selectedItem.dbID || selectedItem.id, {
-            label: inputValue // 根据需求添加其他字段
-            // icon: 'new_icon',
-            // color: '#ff0000'
-        });
-        setItems((prevItems) =>
-            updateTreeItemLabel(prevItems, selectedItemId, inputValue),
+        // 优化点 4: 使用 useCallback 缓存事件处理函数
+        const handleInputBlur = React.useCallback(
+            async (e: React.FocusEvent<HTMLInputElement>) => {
+                if (!selectedItem || !selectedItemId) return;
+
+                try {
+                    // 优化点 5: 合并数据库操作和状态更新
+                    await tagsdb.updateTag(selectedItem.id, {
+                        label: inputValue
+                    });
+
+                    setItems(prev =>
+                        updateTreeItemLabel(prev, selectedItemId, inputValue)
+                    );
+                } catch (error) {
+                    console.error("Update failed:", error);
+                } finally {
+                    setSelectedItemId(null);
+                }
+            },
+            [selectedItem, selectedItemId, inputValue, setItems, setSelectedItemId, updateTreeItemLabel]
         );
-        setSelectedItemId("-1");
-    };
 
-    return (
-        <TreeItem2Label
-            {...other}
-            sx={{
-                display: "flex",
-                alignItems: "center",
-            }}
-            onClick={handleClick}
-            role='debug-ccustomlabel'
-        >
-            {/*{Icon && (*/}
-            {/*    <Box*/}
-            {/*        component={Icon}*/}
-            {/*        className="labelIcon"*/}
-            {/*        color="inherit"*/}
-            {/*        sx={{mr: 1, fontSize: '1.2rem'}}*/}
-            {/*    />*/}
-            {/*)}*/}
+        // 优化点 6: 分离静态内容渲染
+        const renderStaticContent = () => (
+            <StyledTreeItemLabelText variant="body2">
+                {children}
+            </StyledTreeItemLabelText>
+        );
 
-            {itemId != selectedItemId && (
-                <StyledTreeItemLabelText variant="body2">
-                    {children}
-                </StyledTreeItemLabelText>
-            )}
+        // 优化点 7: 单独抽离输入框组件
+        const renderInputField = () => (
+            <input
+                ref={inputRef}
+                type="text"
+                className="pointer-events-none w-full"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onBlur={handleInputBlur}
+                onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                }}
+                minLength={1}
+                maxLength={30}
+                size={10}
+            />
+        );
 
-            {/* 条件渲染 input 元素 */}
-            {itemId === selectedItemId && (
-                <input
-                    ref={inputRef}
-                    type="text"
-                    className="pointer-events-none w-full"
-                    id="name"
-                    name="name"
-                    onBlur={handleInputBlur}
-                    required
-                    value={inputValue} // 绑定值
-                    onKeyDown={(e) => {
-                        e.stopPropagation(); // 阻止事件冒泡
-                        if (e.key === "Enter") {
-                            e.target.blur(); // Remove focus from the input when Enter is pressed
-                        }
-                    }}
-                    onChange={(e) => {
-                        setInputValue(e.target.value);
-                    }} // 更新值
-                    minLength="1"
-                    maxLength="30"
-                    size="10"
-                />
-            )}
-        </TreeItem2Label>
-    );
-}
+        return (
+            <TreeItem2Label
+                sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    // 优化点 8: 避免使用动态样式计算
+                    padding: "2px 4px",
+                    "&:hover": {
+                        backgroundColor: "rgba(0, 0, 0, 0.04)"
+                    }
+                }}
+            >
+                {itemId === selectedItemId ? renderInputField() : renderStaticContent()}
+            </TreeItem2Label>
+        );
+    },
+    // 优化点 9: 自定义 props 比较函数
+    (prevProps, nextProps) => {
+        const isSameSelected = prevProps.selectedItemId === nextProps.selectedItemId;
+        const isSameItem = prevProps.itemId === nextProps.itemId;
+        const isSameContent = prevProps.children === nextProps.children;
+
+        // 只在相关 props 变化时重新渲染
+        return isSameSelected && isSameItem && isSameContent;
+    }
+);
+
+export default CustomLabel;

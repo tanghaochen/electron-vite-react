@@ -119,7 +119,9 @@ const tagTreeList = () => {
     const [contextID, setContextID] = useState("-1");
     const [selectedItem, setSelectedItem] = useState({})
     const [selectedItemId, setSelectedItemId] = useState(null); // For storing the selected item ID
+    // 记录拖拽开始1的item的id
     const [dragStartIDRecording, setDragStartIDRecording] = useState("-1");
+    // 记录拖拽结束的item的id
     const [dragEndIDRecording, setDragEndIDRecording] = useState("-1");
 
     const sortItems = (items: TreeViewBaseItem<ExtendedTreeItemProps>[]): TreeViewBaseItem<ExtendedTreeItemProps>[] => {
@@ -214,13 +216,6 @@ const tagTreeList = () => {
         return <AnimatedCollapse style={style} {...props} />;
     }
 
-    const StyledTreeItemLabelText = styled(Typography)({
-        color: "inherit",
-        fontFamily: "General Sans",
-        width:'100%',
-        fontWeight: 500,
-    }) as unknown as typeof Typography;
-
     const isExpandable = (reactChildren: React.ReactNode) => {
         if (Array.isArray(reactChildren)) {
             return reactChildren.length > 0 && reactChildren.some(isExpandable);
@@ -288,7 +283,6 @@ const tagTreeList = () => {
             getRootProps,
             getContentProps,
             getIconContainerProps,
-            getCheckboxProps,
             getLabelProps,
             getGroupTransitionProps,
             getDragAndDropOverlayProps,
@@ -356,9 +350,11 @@ const tagTreeList = () => {
         };
 
         const handleItemDragEnter = (e, itemID) => {
+            e.stopPropagation();
+            e.preventDefault();
+            dragEnterItemInfo= item
             setDragEndIDRecording(itemID);
             setSelectedItem(item)
-            dragEnterItemInfo= item
         };
 
         const handleItemDragLeave = (e) => {
@@ -433,18 +429,18 @@ const tagTreeList = () => {
                     onContextMenu={(e) => {
                         onContextMenu(e, itemId,parent_id);
                     }}
-                    // className={`${
-                    //     itemId == dragEnterItemID ? `drop-border-${dragStyle}` : ""
-                    // }`}
+                    className={`${
+                        itemId == dragEnterItemID ? `drop-border-${dragStyle}` : ""
+                    }`}
                     {...getRootProps(other)}
                 >
                     <CustomTreeItemContent
                         {...getContentProps({
                             className: clsx("content", {
-                                "Mui-expanded": status.expanded,
-                                "Mui-selected": status.selected,
+                                // "Mui-expanded": status.expanded,
+                                // "Mui-selected": status.selected,
                                 "Mui-focused": status.focused,
-                                "Mui-disabled": status.disabled,
+                                // "Mui-disabled": status.disabled,
                             }),
                         })}
                         onDragStart={(e) => {
@@ -544,10 +540,10 @@ const tagTreeList = () => {
             // tagsdb.createTag()
             console.log('handleHeaderAddBtn')
         }
-const handleRichTree = (e) => {
-    e.preventDefault()
-    console.log('===================')
-}
+        const handleRichTree = (e) => {
+            e.preventDefault()
+            console.log('===================')
+        }
         return (
                 <Stack className="h-full bg-white" style={{
                     // zIndex: 9999,
