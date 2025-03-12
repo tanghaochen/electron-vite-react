@@ -1,4 +1,4 @@
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import NoteContent from "./components/noteContent";
 import NoteContentOutline from "./components/noteContentOutline";
 import NoteOutlineTree from "./components/noteOutlineTagTree";
@@ -12,18 +12,25 @@ import ComplextTree from '@/components/complexTree'
 
 
 function App() {
-    const [count, setCount] = useState(0);
+    const [selectedTag, setSelectedTag] = useState(0);
+
+    useEffect(() => {
+        console.log('selectedTag', selectedTag)
+    }, [selectedTag]);
+
     return (
         <div className="App w-full">
             <div className="flex w-full">
                 <div className='flex'>
                     {/*<NoteOutlineTree></NoteOutlineTree>*/}
-                    <div className='w-80'>
-                        <ComplextTree />
+                    <div className='w-80 border-0 border-r-2 border-solid border-r-gray-300'>
+                        <ComplextTree onSelectedTagChange={setSelectedTag} />
                     </div>
-                    <WordsBar/>
+                    <div className='w-80 border-0 border-r-2 border-solid border-r-gray-300'>
+
+                    <WordsBar /></div>
                 </div>
-                <NoteContentOutline></NoteContentOutline>
+                <NoteContentOutline selectedTag={selectedTag}></NoteContentOutline>
             </div>
         </div>
     );

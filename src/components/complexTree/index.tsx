@@ -12,7 +12,7 @@ import * as React from "react";
 import { nanoid } from "nanoid";
 import contextMenuEvents from "@/components/complexTree/libs/contextMenuEvents";
 
-export default function App() {
+export default function complexTree({ onSelectedTagChange }) {
   // 默认数据
   const [items, setItems] = useState({
     root: {
@@ -29,7 +29,10 @@ export default function App() {
     mouseX: number;
     mouseY: number;
   } | null>(null);
-
+  // 当状态变化时触发回调
+  useEffect(() => {
+    onSelectedTagChange && onSelectedTagChange(selectedItems);
+  }, [selectedItems]);
   // 将数据库获取的数组数据转换为组件需要的结构
   function convertToTree(data) {
     const nodes = {};
@@ -83,12 +86,14 @@ export default function App() {
       data = items;
 
       listeners = [];
+      // 新增item的id
       newItemID = null;
+      // 拖拽之后的id list
+      dropList = []
 
       getTreeItem = async (itemId) => {
         const item = this.data[itemId];
         // items[itemId].isFolder=true
-        console.log("getTreeItem", item);
         return {
           ...item,
           isFolder: item?.children && item.children.length > 0, // 关键修改
@@ -103,7 +108,9 @@ export default function App() {
       };
       async onChangeItemChildren(itemId, newChildren) {
         this.data[itemId].children = newChildren;
-        console.log("onChangeItemChildren");
+        console.log("onChangeItemChildren",itemId, newChildren);
+        console.log('', )
+        this.dropList = newChildren
         this.emitChange([itemId]);
       }
 
@@ -200,52 +207,20 @@ export default function App() {
      * @item 选中的被拖拽的元素
      * @target drop拖拽结束的元素
      */
-    console.log("拖拽结束:", items, "目标:", target);
-    console.log("dataProvider", dataProvider);
-
-    const dropItemID = target.targetItem === "root" ? "0" : target.targetItem;
-    const dragItem = items[0];
-    let dropPosition: "top" | "bottom" | undefined = target?.linePosition; // 没有这个值表示children
-    if (!dropPosition) dropPosition = "children";
-    // const dropItemID = target.parentItem
-    // 更新拖拽后的层级
+    console.log("拖拽结束:", items, "目标:", target,'的',target.linePosition,target.parentItem);
+    const dropItemID = target.parentItem === "root" ? "0" : target.parentItem||0;
     items.forEach((item) => {
       tagsdb.updateTag(item.index, {
         parent_id: dropItemID,
       });
     });
-    console.log(dragItem.index, dropItemID, dropPosition);
-    // tagsdb.reorderIndex(dragItem.index, dropItemID, dropPosition);
-    //获取需要保存排序的层级，这里只能获取到嵌套的 有children的， 另外一种是第一层级
-    // const siderItem = dataProvider.data[dropItemID]?.children || [];
-    // 需要更新被拖拽之后item排序和拖拽进入之后索引
-    // console.log("current", tree.current, environment.current);
-    let dropItem = null;
-    let forIndex = 0;
-    let targetDropIndex = 4;
-    let targetParentID = 0;
-    for (const objIndex in dataProvider.data) {
-      const objItem = dataProvider.data[objIndex];
-      console.log(
-        objIndex,
-        objItem,
-        targetDropIndex,
-        objItem.parent_id,
-        targetParentID,
-      );
-      if (objItem.parent_id == targetParentID) {
-        forIndex++;
-      }
-      if (forIndex == targetDropIndex) {
-        console.log("=====>", forIndex, objItem);
-      }
-    }
-    console.log(forIndex);
-    // console.log("siderItem", siderItem, dragStartIndex);
-    // 此处还可以更新数据到数据库
-    // tagsdb.updateTag(items.index, {
-    //     sort_order: target.childIndex,
-    // })
+
+    dataProvider.dropList.forEach((item,index)=>{
+      console.log('item', item,index)
+        tagsdb.updateTag(item, {
+            sort_order: index,
+        });
+    })
   };
 
   const handleContextMenu = (event, item) => {

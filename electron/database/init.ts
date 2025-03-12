@@ -112,7 +112,11 @@ function executeMigrations() {
 
                 CREATE TABLE notes_metadata (
                     id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title      TEXT NOT NULL,
+                    title      TEXT NOT NULL DEFAULT '',
+                    index      TEXT NOT NULL DEFAULT '', --在词库列表的排列顺序
+                    icon      TEXT NOT NULL DEFAULT '', --词库列表显示的图标
+                    img      TEXT NOT NULL DEFAULT '', --词库列表显示的缩略图背景等
+                    desc      TEXT NOT NULL DEFAULT '', --词库列表显示的简介
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     is_pinned  BOOLEAN DEFAULT 0

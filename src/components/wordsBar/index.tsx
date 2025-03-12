@@ -1,162 +1,162 @@
-import * as React from 'react';
-import {styled, useTheme} from '@mui/material/styles';
-import Box from '@mui/material/Box';
-import Drawer from '@mui/material/Drawer';
-import CssBaseline from '@mui/material/CssBaseline';
-import MuiAppBar, {AppBarProps as MuiAppBarProps} from '@mui/material/AppBar';
-import Toolbar from '@mui/material/Toolbar';
-import List from '@mui/material/List';
-import Typography from '@mui/material/Typography';
-import Divider from '@mui/material/Divider';
-import IconButton from '@mui/material/IconButton';
-import MenuIcon from '@mui/icons-material/Menu';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import InboxIcon from '@mui/icons-material/MoveToInbox';
-import MailIcon from '@mui/icons-material/Mail';
-import {db} from "@/database/db";
-import {tagsdb} from "@/database/tagsdb";
+import {DndContext, MouseSensor, useSensor, useSensors} from '@dnd-kit/core';
+import {
+    rectSortingStrategy,
+    SortableContext,
+    useSortable
+} from '@dnd-kit/sortable';
+import {CSS} from '@dnd-kit/utilities';
+import {useEffect, useState} from 'react';
+import {restrictToParentElement} from "@dnd-kit/modifiers";
+import './style.scss'
+import {IconButton} from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
+import * as React from "react";
+import MaterialIcon from "@/components/materialIcon";
+import AddIcon from '@mui/icons-material/Add';
+import SellIcon from '@mui/icons-material/Sell';
+import {Divide} from "lucide-react";
+import {worksListDB} from "@/database/worksLists";
 
-const drawerWidth = 240;
+function SortableItem({id, index, value}) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+    } = useSortable({id, index});
 
-const Main = styled('main', {shouldForwardProp: (prop) => prop !== 'open'})<{
-    open?: boolean;
-}>(({theme}) => ({
-    flexGrow: 1,
-    padding: theme.spacing(3),
-    transition: theme.transitions.create('margin', {
-        easing: theme.transitions.easing.sharp,
-        duration: theme.transitions.duration.leavingScreen,
-    }),
-    marginLeft: `-${drawerWidth}px`,
-    variants: [
-        {
-            props: ({open}) => open,
-            style: {
-                transition: theme.transitions.create('margin', {
-                    easing: theme.transitions.easing.easeOut,
-                    duration: theme.transitions.duration.enteringScreen,
-                }),
-                marginLeft: 0,
-            },
-        },
-    ],
-}));
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    };
 
-interface AppBarProps extends MuiAppBarProps {
-    open?: boolean;
+    // 组件结构优化
+    return (
+        <li
+            ref={setNodeRef}
+            style={style}
+            {...attributes}
+            {...listeners}
+            className="worksBarItem" // 移除非必要 class
+        >
+            <span className="truncate">{value}</span>
+            <div className='optionBtn'>
+                <IconButton
+                    aria-label="add"
+                    size="small"
+                >
+                    <AddIcon fontSize="inherit"/>
+                </IconButton>
+                <IconButton
+                    aria-label="delete"
+                    size="small"
+                >
+                    <DeleteIcon fontSize="inherit"/>
+                </IconButton>
+            </div>
+        </li>
+    );
+
 }
 
-const AppBar = styled(MuiAppBar, {
-    shouldForwardProp: (prop) => prop !== 'open',
-})<AppBarProps>(({theme}) => ({
-    transition: theme.transitions.create(['margin', 'width'], {
-        easing: theme.transitions.easing.sharp,
-        duration: theme.transitions.duration.leavingScreen,
-    }),
-    variants: [
-        {
-            props: ({open}) => open,
-            style: {
-                width: `calc(100% - ${drawerWidth}px)`,
-                marginLeft: `${drawerWidth}px`,
-                transition: theme.transitions.create(['margin', 'width'], {
-                    easing: theme.transitions.easing.easeOut,
-                    duration: theme.transitions.duration.enteringScreen,
-                }),
+export default function App() {
+    // const [items, setItems] = useState(['Item 333333333333333333333333331', 'Item 2', 'Item 3', 'Item 4']);
+    const [worksList, setWorksList] = useState(['Item 333333333333333333333333331', 'Item 2', 'Item 3', 'Item 4']);
+
+//拖拽传感器，在移动像素5px范围内，不触发拖拽事件
+    const sensors = useSensors(
+        useSensor(MouseSensor, {
+            activationConstraint: {
+                distance: 5,
             },
-        },
-    ],
-}));
+        })
+    );
 
-const DrawerHeader = styled('div')(({theme}) => ({
-    display: 'flex',
-    alignItems: 'center',
-    padding: theme.spacing(0, 1),
-    // necessary for content to be below app bar
-    ...theme.mixins.toolbar,
-    justifyContent: 'flex-end',
-}));
+    function handleDragEnd(event) {
+        const {active, over} = event;
 
-export default function PersistentDrawerLeft() {
-    const theme = useTheme();
-    const [open, setOpen] = React.useState(true);
+        if (over && active.id !== over.id) {
+            setWorksList((items) => {
+                const oldIndex = items.findIndex(item => item === active.id);
+                const newIndex = items.findIndex(item => item === over.id);
 
-    const handleDrawerOpen = () => {
-        setOpen(true);
-    };
-
-    const handleDrawerClose = () => {
-        setOpen(false);
-    };
-
-    const handleItemClick = async (e) => {
-        console.log('click')
-        // db.createNoteSafe('test','contentttt')
-        // const getAllTags = await tagsdb.getTagById(1)  // 参数都应该是数字
-        // console.log('getAllTags', getAllTags)
-        // 正确调用方式
-        tagsdb.createTag(1, '前端框架', 0)  // 参数都应该是数字
-            .then(id => console.log('创建成功，新标签ID:', id))
-            .catch(err => console.error('创建失败:', err));
-
+                return arrayMove(items, oldIndex, newIndex);
+            });
+        }
     }
 
+    useEffect(() => {
+        console.log('Items updated:', worksList);
+    }, [worksList]);
+
+    const handleAddWorksBtn = (e) => {
+        setWorksList((item) => {
+            // const newItem =  item.push('未命名')
+            // console.log('newItem', newItem)
+            return [...item, '未命名']
+        })
+        worksListDB.cre
+    }
     return (
-        <Box sx={{display: 'flex'}}>
-            <Drawer
-                sx={{
-                    width: drawerWidth,
-                    flexShrink: 0,
-                    '& .MuiDrawer-paper': {
-                        width: drawerWidth,
-                        boxSizing: 'border-box',
-                        position:'relative'
-                    },
-                }}
-                variant="persistent"
-                anchor="left"
-                open={open}
-            >
-                <DrawerHeader>
-                    <IconButton onClick={handleDrawerClose}>
-                        {theme.direction === 'ltr' ? <ChevronLeftIcon/> :
-                            <ChevronRightIcon/>}
-                    </IconButton>
-                </DrawerHeader>
-                <Divider/>
-                <List>
-                    {['Inbox', 'Starred', 'Send email', 'Drafts'].map((text, index) => (
-                        <ListItem key={text} disablePadding onClick={handleItemClick}>
-                            <ListItemButton>
-                                <ListItemIcon>
-                                    {index % 2 === 0 ? <InboxIcon/> :
-                                        <MailIcon/>}
-                                </ListItemIcon>
-                                <ListItemText primary={text}/>
-                            </ListItemButton>
-                        </ListItem>
-                    ))}
-                </List>
-                <Divider/>
-                <List>
-                    {['All mail', 'Trash', 'Spam'].map((text, index) => (
-                        <ListItem key={text} disablePadding>
-                            <ListItemButton>
-                                <ListItemIcon>
-                                    {index % 2 === 0 ? <InboxIcon/> :
-                                        <MailIcon/>}
-                                </ListItemIcon>
-                                <ListItemText primary={text}/>
-                            </ListItemButton>
-                        </ListItem>
-                    ))}
-                </List>
-            </Drawer>
-        </Box>
+        <div>
+            <div className='flex content-center mx-4  justify-between'>
+                <div className='content-center flex gap-2'>
+                    <SellIcon/>
+                    tagsName
+                </div>
+                <IconButton
+                    aria-label="add"
+                    size="small"
+                    onClick={handleAddWorksBtn}
+                >
+                    <AddIcon fontSize="small"/>
+                </IconButton>
+            </div>
+            <div className='flex flex-col  gap-4 justify-center'
+                 style={{height: '50vh',
+                     display:worksList?.length && 'none',
+                     color:'#8A8F8D'}}>
+                <div className='flex justify-center'>
+                    <svg t="1741698415168" className="icon" viewBox="0 0 1024 1024"
+                         version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1596"
+                         width="100" height="100">
+                        <path
+                            d="M831.7 369.4H193.6L64 602v290.3h897.2V602L831.7 369.4zM626.6 604.6c0 62.9-51 113.9-114 113.9s-114-51-114-113.9H117.5l103.8-198h582.5l103.8 198h-281zM502.2 131h39.1v140.6h-39.1zM236.855 200.802l27.647-27.647 99.419 99.418-27.648 27.648zM667.547 272.637l99.418-99.419 27.648 27.648-99.418 99.418z"
+                            p-id="1597" fill="#bfbfbf"></path>
+                    </svg>
+                </div>
+                <div className='text-center'>
+                    词库为空, 点击右上方 ＋ 号新建
+                </div>
+            </div>
+            {/*// restrictToParentElement: 限制在父容器内*/}
+            <DndContext onDragEnd={handleDragEnd}
+                        modifiers={[restrictToParentElement]}>
+                <SortableContext items={worksList}
+                                 strategy={rectSortingStrategy}
+                                 sensors={sensors}
+                >
+                    <ul className="worksBarlist">
+                        {worksList.map((item, index) => (
+                            <SortableItem
+                                key={item}
+                                id={item}
+                                index={index}
+                                value={item}
+                            />
+                        ))}
+                    </ul>
+                </SortableContext>
+            </DndContext>
+        </div>
     );
+}
+
+function arrayMove(array, from, to) {
+    const newArray = array.slice();
+    newArray.splice(to < 0 ? newArray.length + to : to, 0,
+        newArray.splice(from, 1)[0]
+    );
+    return newArray;
 }

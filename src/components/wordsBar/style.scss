@@ -1,0 +1,46 @@
+.worksBarlist{
+  padding-left: 0;
+  margin: 0 .5rem;
+}
+// CSS 样式部分
+.worksBarItem {
+  // 基础样式保持不变
+  display: flex;
+  //padding: 0 1rem;
+  align-items: center;
+  height: 2.5rem;
+  width: 100%; // 确保容器有明确宽度
+  border-radius: .5rem;
+
+  // 文字部分
+  > span {
+    flex: 1;
+    width: 80%;
+    min-width: 0; // 关键！允许内容收缩
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 16px; // 留出按钮空间
+    padding-left: 1rem;
+  }
+
+  // 按钮容器
+  .optionBtn {
+    flex-shrink: 0; // 禁止收缩
+    display: none; // 保持原有隐藏逻辑
+    padding-right: 1rem;
+
+    // 按钮间距调整
+    .MuiIconButton-root {
+      padding: 4px;
+      margin-left: 8px;
+    }
+  }
+
+  &:hover{
+    background: #EFF0F0;
+    .optionBtn {
+      display: flex !important;
+    }
+  }
+}

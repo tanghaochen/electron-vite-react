@@ -29,7 +29,16 @@
   /* ===== 层级系统 ===== */
   --z-index-code-block: 10; /* 代码块层级 */
 }
-
+.content-title{
+  :hover{
+    border: none !important;
+    outline: none !important;
+  }
+  &:focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+}
 .tiptap {
   /* ===== 基础元素样式 ===== */
   :first-child {

@@ -197,6 +197,31 @@ const MenuBar = () => {
                 {/*    Redo*/}
                 {/*</button>*/}
             </div>
+            {/*<input*/}
+            {/*    ref={inputRef}*/}
+            {/*    type="text"*/}
+            {/*    className="pointer-events-none w-full"*/}
+            {/*    value={inputValue}*/}
+            {/*    onChange={(e) => setInputValue(e.target.value)}*/}
+            {/*    onBlur={handleInputBlur}*/}
+            {/*    onKeyDown={(e) => {*/}
+            {/*        e.stopPropagation();*/}
+            {/*        if (e.key === "Enter") (e.target as HTMLInputElement).blur();*/}
+            {/*    }}*/}
+
+            {/*/>*/}
+            <div
+                className='w-full my-4'
+            >
+                <input
+                    className='border-none w-full font-bold text-4xl content-title focus:ring-0'
+                    minLength={1}
+                    maxLength={30}
+                    size={10}
+                        // value={'inputValue'}
+                    placeholder={'请输入标题'}
+                />
+            </div>
         </div>
     );
 };
@@ -266,6 +291,7 @@ export default () => {
     return (
         <EditorProvider
             slotBefore={<MenuBar/>}
+            // slotAfter={<MenuBar/>}
             extensions={extensions}
             content={content}
         ></EditorProvider>

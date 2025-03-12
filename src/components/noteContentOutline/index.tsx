@@ -3,6 +3,9 @@ import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import Box from "@mui/material/Box";
 import RichNote from "../richNote";
+import {useEffect} from "react";
+import {tagsdb} from "@/database/tagsdb";
+import {worksListDB} from "@/database/worksLists";
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -33,7 +36,20 @@ function a11yProps(index: number) {
     };
 }
 
-export default function BasicTabs() {
+export default function BasicTabs({selectedTag}) {
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const getTreeData = await worksListDB.getAncestors(selectedTag);
+                console.log('noteContent getTreeData', getTreeData)
+            } catch (error) {
+                console.error("数据获取失败:", error);
+            }
+        };
+        fetchData();
+        console.log('noteContent', selectedTag)
+    },[selectedTag])
+
     const [value, setValue] = React.useState(0);
 
     const handleChange = (event: React.SyntheticEvent, newValue: number) => {
