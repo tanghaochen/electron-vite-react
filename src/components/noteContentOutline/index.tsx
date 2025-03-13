@@ -1,83 +1,73 @@
 import * as React from "react";
-import Tabs from "@mui/material/Tabs";
-import Tab from "@mui/material/Tab";
+import TabContext from '@mui/lab/TabContext';
+import TabList from '@mui/lab/TabList';
+import TabPanel from '@mui/lab/TabPanel';
 import Box from "@mui/material/Box";
+import Tab from "@mui/material/Tab";
 import RichNote from "../richNote";
-import {useEffect} from "react";
-import {tagsdb} from "@/database/tagsdb";
+import { useEffect } from "react";
 import {worksListDB} from "@/database/worksLists";
+import {noteContentDB} from "@/database/noteContentDB";
 
-interface TabPanelProps {
-    children?: React.ReactNode;
-    index: number;
-    value: number;
-}
+export default function BasicTabs({ worksItem,setWorksItem,setWorksList }) {
+    // 打开的标签页和内容
+    const [tabs, setTabs] = React.useState([]);
+    // 当前选中的标签页
+    const [value, setValue] = React.useState(''); // Initialize with empty string
+    // 当前选中的标签页item
+    const [activeTabsItem, setActiveTabsItem] = React.useState({});
 
-function CustomTabPanel(props: TabPanelProps) {
-    const {children, value, index, ...other} = props;
-
-    return (
-        <div
-            role="tabpanel"
-            hidden={value !== index}
-            id={`simple-tabpanel-${index}`}
-            aria-labelledby={`simple-tab-${index}`}
-            {...other}
-        >
-            {value === index && <Box sx={{p: 3}}>{children}</Box>}
-        </div>
-    );
-}
-
-function a11yProps(index: number) {
-    return {
-        id: `simple-tab-${index}`,
-        "aria-controls": `simple-tabpanel-${index}`,
-    };
-}
-
-export default function BasicTabs({selectedTag}) {
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const getTreeData = await worksListDB.getAncestors(selectedTag);
-                console.log('noteContent getTreeData', getTreeData)
-            } catch (error) {
-                console.error("数据获取失败:", error);
-            }
+        const fetchAndAddTab = async () => {
+            if (!worksItem?.id) return;
+
+            const isExistsSameTabWhthID = tabs.some(item => item.value === String(worksItem.id));
+            if (isExistsSameTabWhthID) return setValue(String(worksItem.id));
+            const noteContent = await noteContentDB.getContentByNoteId(worksItem.id);
+
+            setTabs(prevTabs => {
+                const exists = prevTabs.some(item => item.value === String(worksItem.id));
+                if (exists) return prevTabs;
+
+                return [...prevTabs, {
+                    label: worksItem.title,
+                    value: String(worksItem.id),
+                    content: noteContent || ''
+                }];
+            });
+
+            // 设置当前激活的标签页为新添加的标签页
+            setValue(String(worksItem.id)); // 新增代码
         };
-        fetchData();
-        console.log('noteContent', selectedTag)
-    },[selectedTag])
 
-    const [value, setValue] = React.useState(0);
+        fetchAndAddTab();
+    }, [worksItem]);
 
-    const handleChange = (event: React.SyntheticEvent, newValue: number) => {
+    const handleChange = (event, newValue) => {
         setValue(newValue);
     };
 
     return (
-        <Box sx={{width: "100%"}}>
-            <Box sx={{borderBottom: 1, borderColor: "divider"}}>
-                <Tabs
-                    value={value}
-                    onChange={handleChange}
-                    aria-label="basic tabs example"
-                >
-                    <Tab label="Item One" {...a11yProps(0)} />
-                    <Tab label="Item Two" {...a11yProps(1)} />
-                    <Tab label="Item Three" {...a11yProps(2)} />
-                </Tabs>
-            </Box>
-            <CustomTabPanel value={value} index={0}>
-                <RichNote/>
-            </CustomTabPanel>
-            <CustomTabPanel value={value} index={1}>
-                Item Two
-            </CustomTabPanel>
-            <CustomTabPanel value={value} index={2}>
-                Item Three
-            </CustomTabPanel>
+        <Box sx={{ width: "100%" }}>
+            {/* Render TabContext only when tabs exist */}
+                <TabContext value={value}>
+                    <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                        <TabList
+                            onChange={handleChange}
+                            variant="scrollable"
+                            scrollButtons="auto"
+                        >
+                            {tabs.map((tab) => (
+                                <Tab label={tab.label} value={tab.value} key={tab.value} />
+                            ))}
+                        </TabList>
+                    </Box>
+                    {tabs.map((tab) => (
+                        <TabPanel keepMounted value={tab.value} key={tab.value}>
+                            <RichNote activeTabsItem={activeTabsItem} tabItem={tab} setTabs={setTabs} setActiveTabsItem={setActiveTabsItem} setWorksList={setWorksList}></RichNote>
+                        </TabPanel>
+                    ))}
+                </TabContext>
         </Box>
     );
 }

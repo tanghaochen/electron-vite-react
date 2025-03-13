@@ -12,11 +12,17 @@ import ComplextTree from '@/components/complexTree'
 
 
 function App() {
+    // 点击标签树
     const [selectedTag, setSelectedTag] = useState(0);
-
+    // 被点击词库列表worksBar, 打开词库笔记
+    const [worksItem, setWorksItem] = useState({});
+    // 词库列表数据
+    const [worksList, setWorksList] = useState([]);
     useEffect(() => {
         console.log('selectedTag', selectedTag)
     }, [selectedTag]);
+
+
 
     return (
         <div className="App w-full">
@@ -27,10 +33,10 @@ function App() {
                         <ComplextTree onSelectedTagChange={setSelectedTag} />
                     </div>
                     <div className='w-80 border-0 border-r-2 border-solid border-r-gray-300'>
-
-                    <WordsBar /></div>
+                    <WordsBar selectedTagItem={selectedTag} worksItem={worksItem} setWorksItem={setWorksItem} worksList={worksList} setWorksList={setWorksList} />
+                    </div>
                 </div>
-                <NoteContentOutline selectedTag={selectedTag}></NoteContentOutline>
+                <NoteContentOutline worksItem={worksItem} setWorksItem={setWorksItem} setWorksList={setWorksList} ></NoteContentOutline>
             </div>
         </div>
     );

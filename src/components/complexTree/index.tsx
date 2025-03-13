@@ -24,14 +24,16 @@ export default function complexTree({ onSelectedTagChange }) {
   });
   const [focusedItem, setFocusedItem] = useState();
   const [expandedItems, setExpandedItems] = useState([]);
+  // 
   const [selectedItems, setSelectedItems] = useState([]);
+  // 右键菜单
   const [contextMenu, setContextMenu] = React.useState<{
     mouseX: number;
     mouseY: number;
   } | null>(null);
   // 当状态变化时触发回调
   useEffect(() => {
-    onSelectedTagChange && onSelectedTagChange(selectedItems);
+    onSelectedTagChange && onSelectedTagChange(items[selectedItems]);
   }, [selectedItems]);
   // 将数据库获取的数组数据转换为组件需要的结构
   function convertToTree(data) {
@@ -106,10 +108,10 @@ export default function complexTree({ onSelectedTagChange }) {
           label: newName,
         });
       };
+
+      // 主要用于拖拽后的数据变化监听
       async onChangeItemChildren(itemId, newChildren) {
         this.data[itemId].children = newChildren;
-        console.log("onChangeItemChildren",itemId, newChildren);
-        console.log('', )
         this.dropList = newChildren
         this.emitChange([itemId]);
       }
@@ -181,7 +183,6 @@ export default function complexTree({ onSelectedTagChange }) {
       try {
         const getTreeData = await tagsdb.getTagsByCategory(1);
         const fetchedItems = convertToTree(getTreeData);
-        console.log("转换后的树形结构:", fetchedItems, getTreeData);
         setItems(fetchedItems);
 
         // 👇重点：手动更新dataProvider的数据

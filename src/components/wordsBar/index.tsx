@@ -17,30 +17,31 @@ import SellIcon from '@mui/icons-material/Sell';
 import {Divide} from "lucide-react";
 import {worksListDB} from "@/database/worksLists";
 
-function SortableItem({id, index, value}) {
+function SortableItem({index, item}) {
     const {
         attributes,
         listeners,
         setNodeRef,
         transform,
         transition,
-    } = useSortable({id, index});
-
+    } = useSortable({id:item.id, index});
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
     };
+
 
     // 组件结构优化
     return (
         <li
             ref={setNodeRef}
             style={style}
+            worksid={item.id}
             {...attributes}
             {...listeners}
             className="worksBarItem" // 移除非必要 class
         >
-            <span className="truncate">{value}</span>
+            <span className="truncate">{item.title || '未命名'}</span>
             <div className='optionBtn'>
                 <IconButton
                     aria-label="add"
@@ -60,9 +61,45 @@ function SortableItem({id, index, value}) {
 
 }
 
-export default function App() {
+export default function WorksBar({selectedTagItem,worksItem,setWorksItem,worksList, setWorksList}) {
     // const [items, setItems] = useState(['Item 333333333333333333333333331', 'Item 2', 'Item 3', 'Item 4']);
-    const [worksList, setWorksList] = useState(['Item 333333333333333333333333331', 'Item 2', 'Item 3', 'Item 4']);
+    // 词库列表的的分类标签标题
+    const [worksListTitle, setWorksListTitle] = useState('未命名')
+
+    useEffect(() => {
+        setWorksList([])
+        setWorksListTitle(selectedTagItem?.label||'未命名')
+        // Fetch data from the database
+        const fetchData = async () => {
+            console.log('selectedTagItem', selectedTagItem)
+            if(!selectedTagItem) return
+            try {
+                const worksListRes = await worksListDB.getMetadataByTagId(selectedTagItem.index)||[];
+                setWorksList(item=>{
+                    console.log('item,work', item,worksListRes)
+                    return item.concat(worksListRes)
+                });
+                console.log('Items updated:', worksListRes);
+            } catch (error) {
+                console.error("数据获取失败:", error);
+            }
+        };
+        fetchData();
+    }, [selectedTagItem?.index]);
+
+    // useEffect(() => {
+    //     console.log('selectedTagItem?.title111111111', worksList, worksItem)
+    //     if(!worksItem?.title) return
+    //     // 更改对应某个数据的title
+    //     setWorksList((item) => {
+    //         return item.map((item) => {
+    //             if(item.id == worksItem.id){
+    //                 item.title = worksItem.title
+    //             }
+    //             return item
+    //         })
+    //     })
+    // }, [worksItem?.title]);
 
 //拖拽传感器，在移动像素5px范围内，不触发拖拽事件
     const sensors = useSensors(
@@ -86,24 +123,30 @@ export default function App() {
         }
     }
 
-    useEffect(() => {
-        console.log('Items updated:', worksList);
-    }, [worksList]);
 
-    const handleAddWorksBtn = (e) => {
-        setWorksList((item) => {
-            // const newItem =  item.push('未命名')
-            // console.log('newItem', newItem)
-            return [...item, '未命名']
+
+    const handleAddWorksBtn =async (e) => {
+        const createRes = await worksListDB.createMetadata({
+            tags_id:selectedTagItem.index
         })
-        worksListDB.cre
+        console.log('createRes', createRes)
+        // setWorksList((item) => {
+        //     // const newItem =  item.push('未命名')
+        //     // console.log('newItem', newItem)
+        //     return [...item, '未命名']
+        // })
+        // worksListDB.cre
+    }
+
+    const handleWorkItem = (e, value) => {
+      console.log('(e, value)')
     }
     return (
         <div>
             <div className='flex content-center mx-4  justify-between'>
                 <div className='content-center flex gap-2'>
                     <SellIcon/>
-                    tagsName
+                    {worksListTitle}
                 </div>
                 <IconButton
                     aria-label="add"
@@ -115,7 +158,7 @@ export default function App() {
             </div>
             <div className='flex flex-col  gap-4 justify-center'
                  style={{height: '50vh',
-                     display:worksList?.length && 'none',
+                     display:worksList?.length && 'none'||'flex',
                      color:'#8A8F8D'}}>
                 <div className='flex justify-center'>
                     <svg t="1741698415168" className="icon" viewBox="0 0 1024 1024"
@@ -131,24 +174,32 @@ export default function App() {
                 </div>
             </div>
             {/*// restrictToParentElement: 限制在父容器内*/}
-            <DndContext onDragEnd={handleDragEnd}
-                        modifiers={[restrictToParentElement]}>
+            {worksList?.length > 0 && <DndContext onDragEnd={handleDragEnd}
+                                                  sensors={sensors}
+                                                   modifiers={[restrictToParentElement]}>
                 <SortableContext items={worksList}
                                  strategy={rectSortingStrategy}
                                  sensors={sensors}
                 >
-                    <ul className="worksBarlist">
-                        {worksList.map((item, index) => (
-                            <SortableItem
-                                key={item}
-                                id={item}
-                                index={index}
-                                value={item}
-                            />
-                        ))}
+                    <ul className="worksBarlist" onClick={(e) => {
+                        const targetEle = e.nativeEvent.target.closest('li')
+                        if(targetEle.tagName!=='LI') return
+                        const worksID = targetEle.getAttribute('worksid')
+                        const worksItem = worksList.find(item=>item.id==worksID)
+                        setWorksItem(worksItem)
+                    }}>
+                        {worksList.map((item, index) => {
+                            return(
+                                <SortableItem
+                                    index={index}
+                                    item={item}
+                                    key={item.id}
+                                />
+                            )
+                        })}
                     </ul>
                 </SortableContext>
-            </DndContext>
+            </DndContext>}
         </div>
     );
 }

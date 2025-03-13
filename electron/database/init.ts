@@ -109,11 +109,12 @@ function executeMigrations() {
                     FOREIGN KEY (descendant) REFERENCES tags(id) ON DELETE CASCADE,
                     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
                 );
-
+                -- 词库表
                 CREATE TABLE notes_metadata (
                     id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tags_id   INTEGER NOT NULL DEFAULT 0,
                     title      TEXT NOT NULL DEFAULT '',
-                    index      TEXT NOT NULL DEFAULT '', --在词库列表的排列顺序
+                    sort_order      TEXT NOT NULL DEFAULT '', --在词库列表的排列顺序
                     icon      TEXT NOT NULL DEFAULT '', --词库列表显示的图标
                     img      TEXT NOT NULL DEFAULT '', --词库列表显示的缩略图背景等
                     desc      TEXT NOT NULL DEFAULT '', --词库列表显示的简介
