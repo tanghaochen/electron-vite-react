@@ -8,7 +8,8 @@ import './index.css'
 import './demos/ipc'
 import {DevSupport} from "@react-buddy/ide-toolbox";
 import {ComponentPreviews, useInitial} from "@/dev";
-
+import {BrowserRouter, Route, Routes} from 'react-router';
+import SelectedContent from '@/pages/selectedContent'
 // If you want use Node.js, the`nodeIntegration` needs to be enabled in the Main process.
 // import './demos/node'
 
@@ -17,7 +18,16 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
         <DevSupport ComponentPreviews={ComponentPreviews}
                     useInitialHook={useInitial}
         >
-            <App/>
+            <BrowserRouter>
+                <Routes>
+                    <Route path="/" element={<App/>} />
+                    <Route path="/dashboard" element={<SelectedContent/>}>
+                        {/*<Route index element={<RecentActivity />} />*/}
+                        {/*<Route path="project/:id" element={<Project />} />*/}
+                    </Route>
+                </Routes>
+            </BrowserRouter>
+
         </DevSupport>
     </React.StrictMode>,
 )
