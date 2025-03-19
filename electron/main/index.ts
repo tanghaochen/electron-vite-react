@@ -66,58 +66,62 @@ const preload = path.join(__dirname, "../preload/index.mjs");
 const indexHtml = path.join(RENDERER_DIST, "index.html");
 
 async function createWindow() {
-    // win = new BrowserWindow({
-    //     title: "Main window",
-    //     icon: path.join(process.env.VITE_PUBLIC, "favicon.ico"),
-    //     x: 850,
-    //     y: 500,
-    //     width: 1200,
-    //     height: 800,
-    //     alwaysOnTop: true,
-    //   webPreferences: {
-    //       devTools: true,
-    //     preload,
-    //       sandbox: true, // 强制沙箱模式
-    //       webSecurity: false, // 仅开发环境关闭安全限制
-    //       experimentalFeatures: true, // 启用实验功能
-    //     // Consider using contextBridge.exposeInMainWorld
-    //     // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
-    //   },
-    // });
-    //
-    //   if (VITE_DEV_SERVER_URL) {
-    //       // #298
-    //       win.loadURL(VITE_DEV_SERVER_URL);
-    //   // Open devTool if the app is not packaged
-    //       win.webContents.openDevTools();
-    // } else {
-    //       win.loadFile(indexHtml);
-    // }
+    win = new BrowserWindow({
+        title: "Main window",
+        icon: path.join(process.env.VITE_PUBLIC, "favicon.ico"),
+        x: 850,
+        y: 500,
+        width: 1200,
+        height: 800,
+        alwaysOnTop: true,
+      webPreferences: {
+          devTools: true,
+        preload,
+          sandbox: true, // 强制沙箱模式
+          webSecurity: false, // 仅开发环境关闭安全限制
+          experimentalFeatures: true, // 启用实验功能
+        // Consider using contextBridge.exposeInMainWorld
+        // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
+      },
+    });
+
+      if (VITE_DEV_SERVER_URL) {
+          // #298
+          win.loadURL(VITE_DEV_SERVER_URL);
+      // Open devTool if the app is not packaged
+          win.webContents.openDevTools();
+    } else {
+          win.loadFile(indexHtml);
+    }
     // 窗口创建在鼠标位置，支持跨屏
     setInterval(() => {
         if (win2) return;
-        console.log("000", process.env.VITE_DEV_SERVER_URL);
         const globelMousePoint = screen.getCursorScreenPoint();
-        console.log("globel", globelMousePoint);
-
         win2 = new BrowserWindow({
             title: "Main window",
-            icon: path.join(process.env.VITE_PUBLIC, "favicon.ico"),
-            x: globelMousePoint.x,
-            y: globelMousePoint.y,
+            frame: false,
+            autoHideMenuBar: true,
+            width: 940,
+            height: 550,
+            show: false,
+            alwaysOnTop: true,
             webPreferences: {
                 preload,
-                // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
-                // nodeIntegration: true,
-
-                // Consider using contextBridge.exposeInMainWorld
-                // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
                 // contextIsolation: false,
+                // webSecurity: false,
+                // backgroundThrottling: false,
+                // nodeIntegration: true,
             },
         });
         win2.webContents.openDevTools();
         if (VITE_DEV_SERVER_URL) win2.loadURL(VITE_DEV_SERVER_URL + 'dashboard');
-
+        win2.on("closed", () => {
+            win2 = undefined;
+        });
+        // 打包后，失焦隐藏
+        win2.on("blur", () => {
+            win2.hide();
+        });
     }, 1);
     // 加载扩展
     session.defaultSession
@@ -132,19 +136,19 @@ async function createWindow() {
             console.log(JSON.stringify(rest));
         });
     // 打开开发者工具
-    //   win.webContents.openDevTools();
-    //
-    //   win.webContents.on("did-finish-load", () => {
-    //       win?.webContents.send("main-process-message", new Date().toLocaleString());
-    //   });
-    //
-    // // Make all links open with the browser, not with the application
-    // win.webContents.setWindowOpenHandler(({ url }) => {
-    //     if (url.startsWith("https:")) shell.openExternal(url);
-    //     return {action: "deny"};
-    // });
-    //
-    // // Auto update
+      win.webContents.openDevTools();
+
+      win.webContents.on("did-finish-load", () => {
+          win?.webContents.send("main-process-message", new Date().toLocaleString());
+      });
+
+    // Make all links open with the browser, not with the application
+    win.webContents.setWindowOpenHandler(({ url }) => {
+        if (url.startsWith("https:")) shell.openExternal(url);
+        return {action: "deny"};
+    });
+
+    // Auto update
     //   update(win);
 }
 
@@ -218,14 +222,14 @@ app.whenReady().then(async () => {
                     text,
                 })
                 // ...
-            }, 50);
+            }, 0);
         })
     }
 
 
     createWindow();
     const isResgist = globalShortcut.isRegistered('CommandOrControl+Shift+F1')
-    // Register a 'CommandOrControl+X' shortcut listener.
+    // Register a 'CommandOrControl+X' shortcut listenerjava.
     const ret = !isResgist && globalShortcut.register('CommandOrControl+Space',async () => {
         // const copyText = copy();
         // 主动发送给渲染进程（关键代码）
@@ -235,6 +239,14 @@ app.whenReady().then(async () => {
             console.log('clipboardContent', clipboardContent)
             win2.webContents.send('clipboard-update', clipboardContent)
         }
+        // 将像素位置转换成 windows 屏幕缩放比例后的实际坐标。
+        const globelMousePoint = screen.getCursorScreenPoint();
+        // 设置窗口位置
+        win2.setPosition(parseInt(globelMousePoint.x), parseInt(globelMousePoint.y));
+        win2.setAlwaysOnTop(true);
+        win2.setVisibleOnAllWorkspaces(true, {visibleOnFullScreen: true});
+        win2.focus();
+        win2.show();
     }) || null
 
 });
