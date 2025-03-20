@@ -26,7 +26,7 @@ function App() {
 
     return (
         <div className="App w-full">
-            <div className="flex w-full">
+            <div className="flex w-full absolute top-0 bottom-0">
                 <div className='flex'>
                     {/*<NoteOutlineTree></NoteOutlineTree>*/}
                     <div className='w-80 border-0 border-r-2 border-solid border-r-gray-300'>

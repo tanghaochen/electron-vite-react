@@ -16,6 +16,7 @@ import AddIcon from '@mui/icons-material/Add';
 import SellIcon from '@mui/icons-material/Sell';
 import {Divide} from "lucide-react";
 import {worksListDB} from "@/database/worksLists";
+import Button from "@mui/material/Button";
 
 function SortableItem({index, item}) {
     const {
@@ -143,18 +144,22 @@ export default function WorksBar({selectedTagItem,worksItem,setWorksItem,worksLi
     }
     return (
         <div>
-            <div className='flex content-center mx-4  justify-between'>
-                <div className='content-center flex gap-2'>
+            <div className='flex items-center mx-4 justify-between'>
+                <div className='content-center flex gap-2 py-2 text-zinc-500'>
                     <SellIcon/>
                     {worksListTitle}
                 </div>
-                <IconButton
-                    aria-label="add"
+                <Button
+                    color="#000000"
                     size="small"
+                    style={{
+                        backgroundColor: '#F5F5F5',
+                    }}
+                    className='size-8 my-auto'
                     onClick={handleAddWorksBtn}
                 >
                     <AddIcon fontSize="small"/>
-                </IconButton>
+                </Button>
             </div>
             <div className='flex flex-col  gap-4 justify-center'
                  style={{height: '50vh',

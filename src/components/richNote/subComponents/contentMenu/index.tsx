@@ -110,11 +110,10 @@ const MenuBar = ({activeTabsItem,setTabs,tabItem,setRichTextTitleInputValue,setW
             });
         });
         console.log('tabItem', tabItem)
-        // return
         // // 同步数据库
-        // worksListDB.updateMetadata(tabItem.value, {
-        //     title: inputTitleValue,
-        // });
+        worksListDB.updateMetadata(tabItem.value, {
+            title: inputTitleValue,
+        });
     }
 
     // useEffect(() => {

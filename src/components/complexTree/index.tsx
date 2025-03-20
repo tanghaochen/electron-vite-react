@@ -11,7 +11,9 @@ import ContextMenu from "@/components/noteOutlineTagTree/contextMenu";
 import * as React from "react";
 import { nanoid } from "nanoid";
 import contextMenuEvents from "@/components/complexTree/libs/contextMenuEvents";
-
+import './styles/index.scss'
+import AddIcon from "@mui/icons-material/Add";
+import Button from "@mui/material/Button";
 export default function complexTree({ onSelectedTagChange }) {
   // 默认数据
   const [items, setItems] = useState({
@@ -253,7 +255,21 @@ export default function complexTree({ onSelectedTagChange }) {
     );
   };
   return (
-    <div className="w-full h-fullc">
+    <div className="w-full h-full bg-zinc-50">
+      <div className='content-center flex gap-2 py-2 text-zinc-500 justify-between px-2'>
+      <div className="font-bold p-2 w-full">分类标签</div>
+        <Button
+            color="#000000"
+            size="small"
+            style={{
+              backgroundColor: 'white',
+              border: '1px solid #E0E0E0',
+            }}
+            className='size-8 my-auto'
+        >
+          <AddIcon fontSize="small"/>
+        </Button>
+      </div>
       <UncontrolledTreeEnvironment
         ref={environment}
         canDragAndDrop={true}
@@ -299,7 +315,7 @@ export default function complexTree({ onSelectedTagChange }) {
         // renderItem={renderItem} // 自定义渲染某个item
         renderItemTitle={(item) => (
           <span
-            className="w-full h-full content-center"
+            className="w-full h-full content-center text-base text-zinc-800"
             onContextMenu={(e) => handleContextMenu(e, item)}
           >
             {item.title}
