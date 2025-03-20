@@ -15,12 +15,9 @@ export default function contextMenuEvents({
     handleCloseMenu();
 
     if (!contextMenu?.targetItem) return;
-    console.log('contextMenu.targetItem)', contextMenu.targetItem)
     // 调用自定义 dataProvider 的 injectItem 方法：
     dataProvider.injectItem(contextMenu.targetItem);
-
-    // 若同时需要数据库同步，可以在这里调用API:
-    // await tagsdb.createTag(1, '未命名', contextMenu.targetItem);
+    console.log('contextMenu', contextMenu)
   };
 
   const handleEditItem = (e) => {

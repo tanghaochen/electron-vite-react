@@ -113,6 +113,7 @@ export default function complexTree({ onSelectedTagChange }) {
 
       // 主要用于拖拽后的数据变化监听
       async onChangeItemChildren(itemId, newChildren) {
+        console.log('itemId, newChildren', itemId, newChildren)
         this.data[itemId].children = newChildren;
         this.dropList = newChildren
         this.emitChange([itemId]);
@@ -155,23 +156,51 @@ export default function complexTree({ onSelectedTagChange }) {
         this.emitChange([parent.index]);
         tagsdb.deleteTag(itemId);
       };
-      // 新增item
-      injectItem = async (parentItemId, label = "未命名") => {
-        tree.current.expandItem(parentItemId);
+      // 新增item, parentItemId=0表示根节点
+      injectItem = async (parentItemId=0, label = "未命名") => {
+        const parentIdInTree = parentItemId === 0 ? "root" : String(parentItemId);
 
-        let newItemID = await tagsdb.createTag(1, label, parentItemId);
-        newItemID = String(newItemID)
-        this.data[newItemID] = { index: newItemID, label, children: [], parent_id:parentItemId };
-        if (!this.data[parentItemId].children) {
-          this.data[parentItemId].children = [];
+        // 展开父节点
+        if (tree.current) {
+          tree.current.expandItem(parentIdInTree);
         }
-        console.log('this.data[parentItemId],newItemID', this.data[parentItemId],this.data[newItemID])
-        this.data[parentItemId].isFolder = true;
-        this.data[parentItemId].children.push(newItemID);
+
+        // 同步数据库
+        let newItemID = await tagsdb.createTag(1, label, parentItemId);
+        newItemID = String(newItemID);
+
+        // 确保父节点存在
+        if (parentIdInTree !== "root" && !this.data[parentIdInTree]) {
+          console.error("父节点不存在:", parentIdInTree);
+          return;
+        }
+
+        // 创建新节点
+        this.data[newItemID] = {
+          index: newItemID,
+          label,
+          children: [],
+          isFolder: false,
+          parent_id: parentItemId,
+        };
+
+        // 添加到父节点
+        if (parentIdInTree === "root") {
+          this.data.root.children.push(newItemID);
+        } else {
+          this.data[parentIdInTree].children.push(newItemID);
+          this.data[parentIdInTree].isFolder = true;
+        }
+
+        // 触发UI更新
+        this.emitChange([parentIdInTree]);
+
+        // 延迟启动重命名
         this.newItemID = newItemID;
-        this.emitChange([parentItemId]);
         setTimeout(() => {
-          tree.current.startRenamingItem(newItemID);
+          if (tree.current) {
+            tree.current.startRenamingItem(newItemID);
+          }
         }, 100);
       };
     }
@@ -237,6 +266,10 @@ export default function complexTree({ onSelectedTagChange }) {
       targetItem: item.item.index, // store the item's ID (or the whole item if needed)
     });
   };
+  
+  const handleAddTagsItem = (e) => {
+    dataProvider.injectItem();
+  }
   // Custom renderItem to integrate onContextMenu
   const renderItem = ({ item, title, context, arrow, children }) => {
     const InteractiveComponent = "div";
@@ -266,6 +299,7 @@ export default function complexTree({ onSelectedTagChange }) {
               border: '1px solid #E0E0E0',
             }}
             className='size-8 my-auto'
+            onClick={handleAddTagsItem}
         >
           <AddIcon fontSize="small"/>
         </Button>
@@ -295,9 +329,9 @@ export default function complexTree({ onSelectedTagChange }) {
         //     },
         // }}
         onFocusItem={(item) => setFocusedItem(item.label)}
-        onExpandItem={(item) =>
-          setExpandedItems([...expandedItems, item.index])
-        }
+        // onExpandItem={(item) =>
+        //   setExpandedItems([...expandedItems, item.index])
+        // }
         onCollapseItem={(item) =>
           setExpandedItems(
             expandedItems.filter(
