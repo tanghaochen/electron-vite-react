@@ -15,8 +15,8 @@ export const worksListDB = {
         const filteredData = Object.entries(data)
             .filter(([key]) => validColumns.includes(key))
             .reduce((acc, [key, value]) => {
-                // 处理布尔值转换
-                acc[key] = typeof value === 'boolean' ? (value ? 1 : 0) : value;
+                const dbKey = key === 'index' ? 'sort_order' : key; // 关键映射
+                acc[key] = value;
                 return acc;
             }, {});
 
@@ -26,15 +26,20 @@ export const worksListDB = {
 
         const columns = Object.keys(filteredData).join(', ');
         const placeholders = Object.keys(filteredData).map(() => '?').join(', ');
+
+        // 修改点：移除 RETURNING 子句
         const result = await worksListDB.query(
-            `INSERT INTO notes_metadata (${columns}) 
-       VALUES (${placeholders}) 
-       RETURNING id`,
+            `INSERT INTO notes_metadata (${columns}) VALUES (${placeholders})`,
             Object.values(filteredData)
         );
-console.log('result', result)
-        return result[0].id;
+
+        // 修改点：通过lastInsertRowid获取ID
+        return {
+            id: result.lastInsertRowid,
+            ...filteredData // 携带其他字段
+        };
     },
+
 
     /**
      * 通过ID获取元数据
@@ -69,7 +74,7 @@ console.log('result', result)
      * @param {Object} data - 要更新的字段
      */
     updateMetadata: async (id, data) => {
-        const validColumns = ['title', 'index', 'icon', 'img', 'desc', 'is_pinned'];
+        const validColumns = ['title', 'index', 'icon', 'img', 'desc', 'sort_order'];
         const filteredData = Object.entries(data)
             .filter(([key]) => validColumns.includes(key))
             .reduce((acc, [key, value]) => {

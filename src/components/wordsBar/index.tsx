@@ -18,19 +18,30 @@ import {Divide} from "lucide-react";
 import {worksListDB} from "@/database/worksLists";
 import Button from "@mui/material/Button";
 
-function SortableItem({index, item}) {
-    const {
+function SortableItem({ index, item, onAdd, onDelete }) {    const {
         attributes,
         listeners,
         setNodeRef,
         transform,
         transition,
     } = useSortable({id:item.id, index});
+
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
     };
 
+    const handleAddWorskNote = (e) => {
+        e.stopPropagation();
+        onAdd(item);
+    };
+
+    const handleDelWorskNote = (e) => {
+        e.stopPropagation();
+        if (window.confirm('确定要删除此项吗？')) {
+            onDelete(item.id);
+        }
+    };
 
     // 组件结构优化
     return (
@@ -47,12 +58,14 @@ function SortableItem({index, item}) {
                 <IconButton
                     aria-label="add"
                     size="small"
+                    onClick={handleAddWorskNote}
                 >
                     <AddIcon fontSize="inherit"/>
                 </IconButton>
                 <IconButton
                     aria-label="delete"
                     size="small"
+                    onClick={handleDelWorskNote}
                 >
                     <DeleteIcon fontSize="inherit"/>
                 </IconButton>
@@ -70,23 +83,24 @@ export default function WorksBar({selectedTagItem,worksItem,setWorksItem,worksLi
     useEffect(() => {
         setWorksList([])
         setWorksListTitle(selectedTagItem?.label||'未命名')
-        // Fetch data from the database
+
         const fetchData = async () => {
-            console.log('selectedTagItem', selectedTagItem)
             if(!selectedTagItem) return
             try {
-                const worksListRes = await worksListDB.getMetadataByTagId(selectedTagItem.index)||[];
-                setWorksList(item=>{
-                    console.log('item,work', item,worksListRes)
-                    return item.concat(worksListRes)
-                });
-                console.log('Items updated:', worksListRes);
+                const worksListRes = await worksListDB.getMetadataByTagId(selectedTagItem.index) || [];
+
+                // 新增排序逻辑
+                const sortedList = worksListRes.sort((a, b) => a.sort_order - b.sort_order);
+
+                setWorksList(sortedList);  // 直接替换而不是concat
+                console.log('Sorted items:', sortedList);
             } catch (error) {
                 console.error("数据获取失败:", error);
             }
         };
         fetchData();
     }, [selectedTagItem?.index]);
+
 
     // useEffect(() => {
     //     console.log('selectedTagItem?.title111111111', worksList, worksItem)
@@ -115,33 +129,100 @@ export default function WorksBar({selectedTagItem,worksItem,setWorksItem,worksLi
         const {active, over} = event;
 
         if (over && active.id !== over.id) {
-            setWorksList((items) => {
-                const oldIndex = items.findIndex(item => item === active.id);
-                const newIndex = items.findIndex(item => item === over.id);
+            setWorksList((prevItems) => {
+                const oldIndex = prevItems.findIndex(item => item.id === active.id);
+                const newIndex = prevItems.findIndex(item => item.id === over.id);
 
-                return arrayMove(items, oldIndex, newIndex);
+                // 生成新数组
+                const newItems = arrayMove(prevItems, oldIndex, newIndex);
+
+                // 更新排序值并同步数据库
+                const updatedItems = newItems.map((item, index) => {
+                    const updatedItem = {...item, sort_order: index};
+                    worksListDB.updateMetadata(item.id, { sort_order: index });
+                    return updatedItem;
+                });
+
+                return updatedItems;
             });
         }
     }
 
+    const handleAddWorksBtn = async (e) => {
+        try {
+            if (!selectedTagItem?.index) {
+                throw new Error("未选择有效标签");
+            }
+            console.log('selectedTagItem', selectedTagItem)
+            const newItem = await worksListDB.createMetadata({
+                tags_id: selectedTagItem.index,
+                title: "未命名", // 添加默认标题
+                sort_order: worksList.length // 自动生成排序序号
+            });
 
+            console.log('新建结果:', newItem);
 
-    const handleAddWorksBtn =async (e) => {
-        const createRes = await worksListDB.createMetadata({
-            tags_id:selectedTagItem.index
-        })
-        console.log('createRes', createRes)
-        // setWorksList((item) => {
-        //     // const newItem =  item.push('未命名')
-        //     // console.log('newItem', newItem)
-        //     return [...item, '未命名']
-        // })
-        // worksListDB.cre
-    }
+            // 更新状态（带完整数据）
+            setWorksList(prev => [...prev, {
+                id: newItem.id,
+                title: newItem.title,
+                tags_id: newItem.tags_id,
+                sort_order: newItem.index
+            }]);
 
-    const handleWorkItem = (e, value) => {
-      console.log('(e, value)')
-    }
+        } catch (error) {
+            console.error('创建失败:', error);
+            alert(`创建失败: ${error.message}`);
+        }
+    };
+
+    const handleAddWorksNote = async (parentItem) => {
+        try {
+            // 获取插入位置
+            const parentIndex = worksList.findIndex(item => item.id === parentItem.id);
+            if (parentIndex === -1) return;
+
+            // 计算新项目的排序值
+            const baseOrder = worksList[parentIndex].sort_order;
+            const newOrder = baseOrder + 1;
+
+            // 创建新项目
+            const newItem = await worksListDB.createMetadata({
+                tags_id: selectedTagItem?.index,
+                title: '未命名',
+                sort_order: newOrder
+            });
+
+            // 更新后续项目的排序值
+            const updatedList = worksList.map(item => {
+                if (item.sort_order >= newOrder) {
+                    const updatedItem = {...item, sort_order: item.sort_order + 1};
+                    worksListDB.updateMetadata(item.id, { sort_order: updatedItem.sort_order });
+                    return updatedItem;
+                }
+                return item;
+            });
+
+            // 插入新项目
+            updatedList.splice(parentIndex + 1, 0, {
+                ...newItem,
+                sort_order: newOrder
+            });
+
+            setWorksList(updatedList);
+        } catch (error) {
+            console.error('添加失败:', error);
+        }
+    };
+
+    const handleDeleteWorksNote = async (itemId) => {
+        try {
+            await worksListDB.deleteMetadata(itemId);
+            setWorksList(prev => prev.filter(item => item.id !== itemId));
+        } catch (error) {
+            console.error('删除失败:', error);
+        }
+    };
     return (
         <div>
             <div className='flex items-center mx-4 justify-between'>
@@ -192,6 +273,7 @@ export default function WorksBar({selectedTagItem,worksItem,setWorksItem,worksLi
                         const worksID = targetEle.getAttribute('worksid')
                         const worksItem = worksList.find(item=>item.id==worksID)
                         setWorksItem(worksItem)
+                        // const targetBtn = e.nativeEvent.target.closest('BUTTON')
                     }}>
                         {worksList.map((item, index) => {
                             return(
@@ -199,6 +281,8 @@ export default function WorksBar({selectedTagItem,worksItem,setWorksItem,worksLi
                                     index={index}
                                     item={item}
                                     key={item.id}
+                                    onAdd={handleAddWorksNote}
+                                    onDelete={handleDeleteWorksNote}
                                 />
                             )
                         })}
