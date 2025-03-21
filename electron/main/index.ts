@@ -18,7 +18,7 @@ import {
     REDUX_DEVTOOLS,
     REACT_DEVELOPER_TOOLS,
 } from "electron-devtools-installer";
-import { getSelectionText, copy } from '@xitanggg/node-selection';
+import {getSelectionText, copy} from '@xitanggg/node-selection';
 import {keyboard, Key} from "@nut-tree/nut-js";
 import ClipboardListener from 'clipboard-event'
 
@@ -73,25 +73,26 @@ async function createWindow() {
         y: 500,
         width: 1200,
         height: 800,
+        autoHideMenuBar: true,
         alwaysOnTop: true,
-      webPreferences: {
-          devTools: true,
-        preload,
-          sandbox: true, // 强制沙箱模式
-          webSecurity: false, // 仅开发环境关闭安全限制
-          experimentalFeatures: true, // 启用实验功能
-        // Consider using contextBridge.exposeInMainWorld
-        // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
-      },
+        webPreferences: {
+            devTools: true,
+            preload,
+            sandbox: true, // 强制沙箱模式
+            webSecurity: false, // 仅开发环境关闭安全限制
+            experimentalFeatures: true, // 启用实验功能
+            // Consider using contextBridge.exposeInMainWorld
+            // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
+        },
     });
 
-      if (VITE_DEV_SERVER_URL) {
-          // #298
-          win.loadURL(VITE_DEV_SERVER_URL);
-      // Open devTool if the app is not packaged
-          win.webContents.openDevTools();
+    if (VITE_DEV_SERVER_URL) {
+        // #298
+        win.loadURL(VITE_DEV_SERVER_URL);
+        // Open devTool if the app is not packaged
+        win.webContents.openDevTools();
     } else {
-          win.loadFile(indexHtml);
+        win.loadFile(indexHtml);
     }
     // 窗口创建在鼠标位置，支持跨屏
     setInterval(() => {
@@ -99,7 +100,7 @@ async function createWindow() {
         const globelMousePoint = screen.getCursorScreenPoint();
         win2 = new BrowserWindow({
             title: "Main window",
-            frame: false,
+            frame: true,
             autoHideMenuBar: true,
             width: 940,
             height: 550,
@@ -119,9 +120,9 @@ async function createWindow() {
             win2 = undefined;
         });
         // 打包后，失焦隐藏
-        win2.on("blur", () => {
-            win2.hide();
-        });
+        // win2.on("blur", () => {
+        //     win2.hide();
+        // });
     }, 1);
     // 加载扩展
     session.defaultSession
@@ -136,14 +137,14 @@ async function createWindow() {
             console.log(JSON.stringify(rest));
         });
     // 打开开发者工具
-      win.webContents.openDevTools();
+    win.webContents.openDevTools();
 
-      win.webContents.on("did-finish-load", () => {
-          win?.webContents.send("main-process-message", new Date().toLocaleString());
-      });
+    win.webContents.on("did-finish-load", () => {
+        win?.webContents.send("main-process-message", new Date().toLocaleString());
+    });
 
     // Make all links open with the browser, not with the application
-    win.webContents.setWindowOpenHandler(({ url }) => {
+    win.webContents.setWindowOpenHandler(({url}) => {
         if (url.startsWith("https:")) shell.openExternal(url);
         return {action: "deny"};
     });
@@ -230,7 +231,7 @@ app.whenReady().then(async () => {
     createWindow();
     const isResgist = globalShortcut.isRegistered('CommandOrControl+Shift+F1')
     // Register a 'CommandOrControl+X' shortcut listenerjava.
-    const ret = !isResgist && globalShortcut.register('CommandOrControl+Space',async () => {
+    const ret = !isResgist && globalShortcut.register('CommandOrControl+Space', async () => {
         // const copyText = copy();
         // 主动发送给渲染进程（关键代码）
         if (win2 && !win2.isDestroyed()) {

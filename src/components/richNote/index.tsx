@@ -39,7 +39,7 @@ import Italic from "@tiptap/extension-italic";
 import ContentMenu from "./subComponents/contentMenu";
 import Placeholder from '@tiptap/extension-placeholder'
 import {noteContentDB} from "@/database/noteContentDB";
-
+import './styles.scss'
 const lowlight = createLowlight(all);
 lowlight.register("html", html);
 lowlight.register("css", css);
@@ -65,16 +65,7 @@ const extensions = [
         },
     }),
     Placeholder.configure({
-        // Use a placeholder:
         placeholder: '开始编辑词条内容 …',
-        // Use different placeholders depending on the node type:
-        // placeholder: ({ node }) => {
-        //   if (node.type.name === 'heading') {
-        //     return 'What’s the title?'
-        //   }
-
-        //   return 'Can you add some further context?'
-        // },
     }),
     CodeBlockLowlight.configure({
         lowlight,
@@ -87,27 +78,8 @@ const extensions = [
     TaskItem.configure({}),
 ];
 
-const content = `
-<h2>
-  Hi there,
-</h2>
-`;
-
-
-
 export default ({activeTabsItem ,tabItem, setActiveTabsItem,setTabs,setWorksList}) => {
     const [richTextTitleInputValue, setRichTextTitleInputValue] = useState("");
-
-    useEffect(() => {
-        console.log('tabItem change', activeTabsItem ,tabItem)
-        // 更新tabs组件激活tab的label
-        // setActiveTabsItem((item) => {
-        //     return {
-        //         ...item,
-        //         label: richTextTitleInputValue,
-        //     };
-        // })
-    },[tabItem])
 
     const handleTPBlur = (e) => {
         // 获取改变的内容
@@ -116,7 +88,6 @@ export default ({activeTabsItem ,tabItem, setActiveTabsItem,setTabs,setWorksList
         // 因为页面会缓存更改后的内容, 所以这里直接更新数据库, 也只有这一个地方更新笔记内容的数据库
         noteContentDB.updateContent(tabItem.value, TPContent)
     }
-
     return (
         <EditorProvider
             slotBefore={<ContentMenu activeTabsItem={activeTabsItem} setTabs={setTabs} tabItem={tabItem} setRichTextTitleInputValue={setRichTextTitleInputValue} setWorksList={setWorksList} />}

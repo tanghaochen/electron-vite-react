@@ -22,8 +22,6 @@ function App() {
         console.log('selectedTag', selectedTag)
     }, [selectedTag]);
 
-
-
     return (
         <div className="App w-full">
             <div className="flex w-full absolute top-0 bottom-0">

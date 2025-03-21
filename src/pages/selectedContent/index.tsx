@@ -4,7 +4,10 @@ import {clipboard} from 'electron';
 import './styles/index.scss'
 import {worksListDB} from "@/database/worksLists";
 import {noteContentDB} from "@/database/noteContentDB";
-
+import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
+import CloseIcon from "@mui/icons-material/Close";
+import SettingsIcon from '@mui/icons-material/Settings';
+import Button from "@mui/material/Button";
 interface HighlightProps {
     textContent: string;
     items?: Array<{ id: number; title: string }>;
@@ -85,14 +88,7 @@ const TextHighlighter = ({textContent, items = []}: HighlightProps) => {
     }, []);
 
     return (
-        <div className="highlighter-container">
-            <button
-                onClick={highlightAll}
-                disabled={items.length === 0}
-                className="highlight-trigger"
-            >
-                🖍️ 执行未命名高亮javasdfsdlog3234222das
-            </button>
+        <div className="highlighter-container mx-2">
             <div className="flex gap-1 h-80">
                 <div className="content-preview content-preview-target">
                     <div className='font-bold'>获取内容</div>
@@ -146,10 +142,31 @@ const App = () => {
         };
     }, [handleClipboardUpdate]);
 
-
     return (
-        <div style={{maxWidth: 800, margin: '20px auto'}}>
-            <h1>技术术语高亮演示</h1>
+        <div style={{maxWidth: 800 }}>
+            <div className="bg-gray-100 p-4 rounded-md mb-4 flex justify-between">
+                <div>11</div>
+                <div>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={<PushPinOutlinedIcon />}
+                    >
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={<SettingsIcon />}
+                    >
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={<CloseIcon />}
+                    >
+                    </Button>
+                </div>
+            </div>
             <TextHighlighter
                 textContent={customClipBoardContent}
                 items={highlightedKeywords}

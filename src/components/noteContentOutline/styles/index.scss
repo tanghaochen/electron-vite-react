@@ -1,0 +1,22 @@
+.close-icon {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  &:hover {
+    background-color: rgba(0,0,0,0.08) !important;
+  }
+}
+
+.MuiTab-root:hover .close-icon {
+  opacity: 1;
+}
+
+.dragging-tab {
+  transition: transform 0.2s ease;
+}
+
+.drag-overlay {
+  .MuiTab-root {
+    transform-origin: center center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  }
+}

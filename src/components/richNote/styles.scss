@@ -40,6 +40,10 @@
   }
 }
 .tiptap {
+  border: none;
+  outline: none;
+  width: 100%;
+  height: 100%;
   /* ===== 基础元素样式 ===== */
   :first-child {
     margin-top: 0;
@@ -184,7 +188,7 @@
   }
   /* Placeholder (on every new line) */
   .is-empty::before {
-    color: var(--gray-4);
+    @apply text-stone-500;
     content: attr(data-placeholder);
     float: left;
     height: 0;

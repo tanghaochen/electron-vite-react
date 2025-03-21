@@ -18,7 +18,8 @@ import {Divide} from "lucide-react";
 import {worksListDB} from "@/database/worksLists";
 import Button from "@mui/material/Button";
 
-function SortableItem({ index, item, onAdd, onDelete }) {    const {
+function SortableItem({ index, item, onAdd, onDelete }) {
+    const {
         attributes,
         listeners,
         setNodeRef,
@@ -280,7 +281,7 @@ export default function WorksBar({selectedTagItem,worksItem,setWorksItem,worksLi
                                 <SortableItem
                                     index={index}
                                     item={item}
-                                    key={item.id}
+                                    key={index}
                                     onAdd={handleAddWorksNote}
                                     onDelete={handleDeleteWorksNote}
                                 />

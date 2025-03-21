@@ -288,7 +288,7 @@ export default function complexTree({ onSelectedTagChange }) {
     );
   };
   return (
-    <div className="w-full h-full bg-zinc-50">
+    <div className="w-full h-full bg-stone-50">
       <div className='content-center flex gap-2 py-2 text-zinc-500 justify-between px-2'>
       <div className="font-bold p-2 w-full">分类标签</div>
         <Button
