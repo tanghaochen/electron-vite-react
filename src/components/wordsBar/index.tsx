@@ -18,8 +18,7 @@ import {Divide} from "lucide-react";
 import {worksListDB} from "@/database/worksLists";
 import Button from "@mui/material/Button";
 
-function SortableItem({ index, item, onAdd, onDelete }) {
-    const {
+function SortableItem({ index, item, onAdd, onDelete }) {    const {
         attributes,
         listeners,
         setNodeRef,
@@ -84,24 +83,23 @@ export default function WorksBar({selectedTagItem,worksItem,setWorksItem,worksLi
     useEffect(() => {
         setWorksList([])
         setWorksListTitle(selectedTagItem?.label||'未命名')
-
+        // Fetch data from the database
         const fetchData = async () => {
+            console.log('selectedTagItem', selectedTagItem)
             if(!selectedTagItem) return
             try {
-                const worksListRes = await worksListDB.getMetadataByTagId(selectedTagItem.index) || [];
-
-                // 新增排序逻辑
-                const sortedList = worksListRes.sort((a, b) => a.sort_order - b.sort_order);
-
-                setWorksList(sortedList);  // 直接替换而不是concat
-                console.log('Sorted items:', sortedList);
+                const worksListRes = await worksListDB.getMetadataByTagId(selectedTagItem.index)||[];
+                setWorksList(item=>{
+                    console.log('item,work', item,worksListRes)
+                    return item.concat(worksListRes)
+                });
+                console.log('Items updated:', worksListRes);
             } catch (error) {
                 console.error("数据获取失败:", error);
             }
         };
         fetchData();
     }, [selectedTagItem?.index]);
-
 
     // useEffect(() => {
     //     console.log('selectedTagItem?.title111111111', worksList, worksItem)
@@ -130,24 +128,26 @@ export default function WorksBar({selectedTagItem,worksItem,setWorksItem,worksLi
         const {active, over} = event;
 
         if (over && active.id !== over.id) {
-            setWorksList((prevItems) => {
-                const oldIndex = prevItems.findIndex(item => item.id === active.id);
-                const newIndex = prevItems.findIndex(item => item.id === over.id);
+            setWorksList((items) => {
+                const oldIndex = items.findIndex(item => item.id === active.id);
+                const newIndex = items.findIndex(item => item.id === over.id);
 
-                // 生成新数组
-                const newItems = arrayMove(prevItems, oldIndex, newIndex);
+                // 获取新数组
+                const newItems = arrayMove(items, oldIndex, newIndex);
 
-                // 更新排序值并同步数据库
-                const updatedItems = newItems.map((item, index) => {
-                    const updatedItem = {...item, sort_order: index};
+                // 更新数据库排序
+                newItems.forEach((item, index) => {
                     worksListDB.updateMetadata(item.id, { sort_order: index });
-                    return updatedItem;
                 });
 
-                return updatedItems;
+                return newItems.map((item, index) => ({
+                    ...item,
+                    sort_order: index
+                }));
             });
         }
     }
+
 
     const handleAddWorksBtn = async (e) => {
         try {
@@ -181,33 +181,33 @@ export default function WorksBar({selectedTagItem,worksItem,setWorksItem,worksLi
         try {
             // 获取插入位置
             const parentIndex = worksList.findIndex(item => item.id === parentItem.id);
-            if (parentIndex === -1) return;
+            const insertPosition = parentIndex + 1;
 
-            // 计算新项目的排序值
-            const baseOrder = worksList[parentIndex].sort_order;
-            const newOrder = baseOrder + 1;
-
-            // 创建新项目
+            // 创建新条目
             const newItem = await worksListDB.createMetadata({
                 tags_id: selectedTagItem?.index,
+                parent_id: parentItem?.id || 0,
                 title: '未命名',
-                sort_order: newOrder
+                sort_order: insertPosition
             });
 
-            // 更新后续项目的排序值
+            // 更新后续条目的排序值
             const updatedList = worksList.map(item => {
-                if (item.sort_order >= newOrder) {
-                    const updatedItem = {...item, sort_order: item.sort_order + 1};
-                    worksListDB.updateMetadata(item.id, { sort_order: updatedItem.sort_order });
-                    return updatedItem;
+                if (item.sort_order >= insertPosition) {
+                    return {...item, sort_order: item.sort_order + 1};
                 }
                 return item;
             });
 
-            // 插入新项目
-            updatedList.splice(parentIndex + 1, 0, {
+            // 插入新条目
+            updatedList.splice(insertPosition, 0, {
                 ...newItem,
-                sort_order: newOrder
+                sort_order: insertPosition
+            });
+
+            // 批量更新数据库
+            updatedList.slice(insertPosition).forEach(item => {
+                worksListDB.updateMetadata(item.id, { sort_order: item.sort_order });
             });
 
             setWorksList(updatedList);
@@ -215,6 +215,7 @@ export default function WorksBar({selectedTagItem,worksItem,setWorksItem,worksLi
             console.error('添加失败:', error);
         }
     };
+
 
     const handleDeleteWorksNote = async (itemId) => {
         try {
@@ -281,7 +282,7 @@ export default function WorksBar({selectedTagItem,worksItem,setWorksItem,worksLi
                                 <SortableItem
                                     index={index}
                                     item={item}
-                                    key={index}
+                                    key={item.id}
                                     onAdd={handleAddWorksNote}
                                     onDelete={handleDeleteWorksNote}
                                 />
