@@ -95,35 +95,35 @@ async function createWindow() {
         win.loadFile(indexHtml);
     }
     // 窗口创建在鼠标位置，支持跨屏
-    // setInterval(() => {
-    //     if (win2) return;
-    //     const globelMousePoint = screen.getCursorScreenPoint();
-    //     win2 = new BrowserWindow({
-    //         title: "Main window",
-    //         frame: true,
-    //         autoHideMenuBar: true,
-    //         width: 940,
-    //         height: 550,
-    //         show: false,
-    //         alwaysOnTop: true,
-    //         webPreferences: {
-    //             preload,
-    //             // contextIsolation: false,
-    //             // webSecurity: false,
-    //             // backgroundThrottling: false,
-    //             // nodeIntegration: true,
-    //         },
-    //     });
-    //     win2.webContents.openDevTools();
-    //     if (VITE_DEV_SERVER_URL) win2.loadURL(VITE_DEV_SERVER_URL + 'dashboard');
-    //     win2.on("closed", () => {
-    //         win2 = undefined;
-    //     });
-    //     // 打包后，失焦隐藏
-    //     // win2.on("blur", () => {
-    //     //     win2.hide();
-    //     // });
-    // }, 1);
+    setInterval(() => {
+        if (win2) return;
+        const globelMousePoint = screen.getCursorScreenPoint();
+        win2 = new BrowserWindow({
+            title: "Main window",
+            frame: true,
+            autoHideMenuBar: true,
+            width: 940,
+            height: 550,
+            show: false,
+            alwaysOnTop: true,
+            webPreferences: {
+                preload,
+                // contextIsolation: false,
+                // webSecurity: false,
+                // backgroundThrottling: false,
+                // nodeIntegration: true,
+            },
+        });
+        win2.webContents.openDevTools();
+        if (VITE_DEV_SERVER_URL) win2.loadURL(VITE_DEV_SERVER_URL + 'dashboard');
+        win2.on("closed", () => {
+            win2 = undefined;
+        });
+        // 打包后，失焦隐藏
+        // win2.on("blur", () => {
+        //     win2.hide();
+        // });
+    }, 1);
     // 加载扩展
     session.defaultSession
         .loadExtension(
