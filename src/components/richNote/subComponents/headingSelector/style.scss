@@ -1,0 +1,23 @@
+.css-1fnc9ax-MuiButtonBase-root-MuiButton-root {
+  padding: 5px 0px !important;
+  height: fit-content;
+}
+
+
+// 使用更深层级的嵌套
+.Popper-root {
+  .colorPicker {
+    > div:first-child {
+      display: none !important;
+    }
+
+    div[title="#FFFFFF"] {
+      box-shadow: none !important;
+      border: 1px solid #ddd !important;
+    }
+  }
+}
+
+.custom-color-picker .react-color-picker {
+  box-shadow: none !important;
+}

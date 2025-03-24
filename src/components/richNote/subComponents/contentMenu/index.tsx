@@ -13,20 +13,12 @@ import ListItemText from "@mui/material/ListItemText";
 import Divider from "@mui/material/Divider";
 import HightlightComp from "@/components/richNote/subComponents/highlight";
 import {worksListDB} from "@/database/worksLists";
+import HeadingSelector
+    from "@/components/richNote/subComponents/headingSelector";
 
 const MenuBar = ({activeTabsItem,setTabs,tabItem,setRichTextTitleInputValue,setWorksList}) => {
     const {editor} = useCurrentEditor();
     const [inputTitleValue, setInputTitleValue] = useState(tabItem.label);
-    const ITEM_HEIGHT = 48;
-    const ITEM_PADDING_TOP = 8;
-    const MenuProps = {
-        PaperProps: {
-            style: {
-                maxHeight: ITEM_HEIGHT * 7 + ITEM_PADDING_TOP, // 7个选项的高度
-                width: 200,
-            },
-        },
-    };
 
     if (!editor) {
         return null;
@@ -58,35 +50,6 @@ const MenuBar = ({activeTabsItem,setTabs,tabItem,setRichTextTitleInputValue,setW
             </Button>
         );
     };
-
-    const [selectedPara, setSelectedPara] = React.useState("正文"); // 修改1: 使用字符串状态
-    // 实时获取当前段落/标题状态
-    const currentValue = React.useMemo(() => {
-        if (!editor) return "正文";
-
-        // 检查是否是标题（优先级从h1到h6）
-        for (let level = 1; level <= 6; level++) {
-            if (editor.isActive("heading", {level})) {
-                return `标题${level}`;
-            }
-        }
-        return "正文";
-    }, [editor?.state]); // 当编辑器状态变化时自动更新
-
-    const handleChange = (event: SelectChangeEvent<string>) => {
-        // 修改2: 处理字符串值
-        const value = event.target.value;
-        setSelectedPara(value);
-
-        // 根据选择执行编辑器命令
-        if (value === "正文") {
-            editor?.chain().focus().setParagraph().run();
-        } else if (value.startsWith("标题")) {
-            const level = parseInt(value.replace("标题", ""));
-            editor?.chain().focus().toggleHeading({level}).run();
-        }
-    };
-
     const handleInputTitleBlur = () => {
         // setRichTextTitleInputValue(inputTitleValue)
         // 更新tab标题数据
@@ -125,49 +88,7 @@ const MenuBar = ({activeTabsItem,setTabs,tabItem,setRichTextTitleInputValue,setW
             <div
                 className="button-group inline-flex justify-start align-middle overflow-auto">
                 {/*ChromePicker,CompactPicker,GithubPicker, HuePicker, HuePicker,PhotoshopPicker,SketchPicker*/}
-
-                <FormControl sx={{m: 1, width: 100}} size="small">
-                    <Select
-                        value={currentValue}
-                        onChange={handleChange}
-                        renderValue={(value) => value}
-                        MenuProps={MenuProps}
-                    >
-                        {paragraphTList.map((paraItem, paraIndex) => (
-                            <MenuItem
-                                key={paraItem.label}
-                                value={paraItem.label}
-                                sx={{
-                                    py: 1, // 减少纵向padding
-                                    "& h1, & h2, & h3, & h4, & h5, & h6": {
-                                        margin: 0,
-                                        lineHeight: "1.3",
-                                        letterSpacing: "0.5px",
-                                    },
-                                }}
-                            >
-                                <ListItemText>
-                                    {React.createElement(
-                                        paraIndex === 0 ? "p" : `h${paraIndex}`,
-                                        {
-                                            style: {
-                                                fontSize:
-                                                    paraIndex === 0
-                                                        ? "1rem"
-                                                        : `${2 - paraIndex * 0.2}rem`,
-                                                fontWeight: paraIndex === 0 ? 400 : 600,
-                                                color: "#333",
-                                                marginTop: paraIndex === 0 && "0.5rem",
-                                                marginBottom: paraIndex === 0 && ".5rem",
-                                            },
-                                        },
-                                        paraItem.label,
-                                    )}
-                                </ListItemText>
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
+                <HeadingSelector editor={editor} inputTitleValue={inputTitleValue} setTabs={setTabs} tabItem={setTabs} setWorksList={setWorksList}/>
 
                 {extTypeList.map((item, index) => {
                     return <CommonBtn key={index} {...item} />;

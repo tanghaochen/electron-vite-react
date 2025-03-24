@@ -118,19 +118,19 @@ export default function Highlight({editor}) {
                 aria-label="Button group with a nested menu"
             >
                 <Button onClick={handleClick}>
-          <span
-              className="w-4"
-              style={{
-                  fontSize: "1rem",
-                  width: "1.5rem",
-                  height: "1.5rem",
-                  color: `${currentTextColor} !important`,
-                  backgroundColor: currentHighlightColor,
-                  borderBottom: `.2rem solid ${textColorPicker}`,
-              }}
-          >
-            A
-          </span>
+                  <span
+                      className="w-4"
+                      style={{
+                          fontSize: "1rem",
+                          width: "1.5rem",
+                          height: "1.5rem",
+                          color: `${currentTextColor} !important`,
+                          backgroundColor: currentHighlightColor,
+                          borderBottom: `.2rem solid ${textColorPicker}`,
+                      }}
+                  >
+                    A
+                  </span>
                     {/*{options[selectedIndex]}*/}
                 </Button>
                 <Button

@@ -84,7 +84,6 @@ export default ({activeTabsItem ,tabItem, setActiveTabsItem,setTabs,setWorksList
     const handleTPBlur = (e) => {
         // 获取改变的内容
         const TPContent = e.editor.getHTML();
-        console.log('activeTabsItem', activeTabsItem)
         // 因为页面会缓存更改后的内容, 所以这里直接更新数据库, 也只有这一个地方更新笔记内容的数据库
         noteContentDB.updateContent(tabItem.value, TPContent)
     }
