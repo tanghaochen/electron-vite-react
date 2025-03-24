@@ -23,8 +23,7 @@ function App() {
     }, [selectedTag]);
 
     return (
-        <div className="App w-full overflow-clip">
-            <div className="flex w-full absolute top-0 bottom-0 overflow-clip">
+        <div className="App w-full flex-1 flex h-full absolute top-0 left-0 bottom-0">
                 <div className='flex'>
                     {/*<NoteOutlineTree></NoteOutlineTree>*/}
                     <div className='w-80 border-0 border-r-2 border-solid border-r-gray-300'>
@@ -35,7 +34,6 @@ function App() {
                     </div>
                 </div>
                 <NoteContentOutline worksItem={worksItem} setWorksItem={setWorksItem} setWorksList={setWorksList} ></NoteContentOutline>
-            </div>
         </div>
     );
 }

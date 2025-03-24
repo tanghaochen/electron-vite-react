@@ -59,7 +59,7 @@ export default function BasicTabs({worksItem, setWorksItem, setWorksList}) {
     };
 
     return (
-        <div className="react-tabs-custom flex-1 overflow-clip">
+        <div className='flex-1 relative overflow-hidden'>
             <Tabs
                 selectedIndex={selectedIndex}
                 onSelect={(index) => setSelectedIndex(index)}
@@ -86,17 +86,19 @@ export default function BasicTabs({worksItem, setWorksItem, setWorksList}) {
                     ))}
                 </TabList>
 
-                {tabs.map((tab) => (
-                    <TabPanel key={tab.value}>
-                        <RichNote
-                            activeTabsItem={activeTabsItem}
-                            tabItem={tab}
-                            setTabs={setTabs}
-                            setActiveTabsItem={setActiveTabsItem}
-                            setWorksList={setWorksList}
-                        />
-                    </TabPanel>
-                ))}
+                <div className={'w-auto w-fit px-24'}>
+                    {tabs.map((tab) => (
+                        <TabPanel key={tab.value}>
+                            <RichNote
+                                activeTabsItem={activeTabsItem}
+                                tabItem={tab}
+                                setTabs={setTabs}
+                                setActiveTabsItem={setActiveTabsItem}
+                                setWorksList={setWorksList}
+                            />
+                        </TabPanel>
+                    ))}
+                </div>
             </Tabs>
         </div>
     );
