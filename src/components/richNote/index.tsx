@@ -41,6 +41,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { noteContentDB } from "@/database/noteContentDB";
 import "./styles.scss";
 import { ImagePasteHandler } from "./extensions/ImagePasteHandler";
+import { CustomImage } from "./extensions/CustomImage";
 const lowlight = createLowlight(all);
 lowlight.register("html", html);
 lowlight.register("css", css);
@@ -48,11 +49,20 @@ lowlight.register("js", js);
 lowlight.register("ts", ts);
 //
 const extensions = [
-  StarterKit.configure({}),
+  StarterKit.configure({
+    image: true,
+  }),
   Color.configure({ types: [TextStyle.name, ListItem.name] }),
   TextStyle.configure({ types: [ListItem.name] }),
   Highlight.configure({ multicolor: true }),
-  Image,
+  // CustomImage,
+  Image.configure({
+    HTMLAttributes: {
+      class: "my-custom-class",
+    },
+    inline: false,
+    allowBase64: true,
+  }),
   Italic,
   Blockquote.configure({
     HTMLAttributes: {
