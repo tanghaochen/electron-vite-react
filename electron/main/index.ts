@@ -84,9 +84,104 @@ function setupIpcHandlers(
   dbManager.setupIpcHandlers(ipcMain);
 
   // 设置图片下载IPC处理程序
-  ipcMain.handle("download-image", async (_, url, referer?: string) => {
+  ipcMain.handle(
+    "download-image",
+    async (_, url, referer?: string, originalUrl?: string) => {
+      try {
+        console.log("开始下载图片:", url);
+
+        // 创建下载目录
+        const downloadDir = path.join(
+          app.getPath("userData"),
+          "downloaded_images",
+        );
+        if (!fs.existsSync(downloadDir)) {
+          fs.mkdirSync(downloadDir, { recursive: true });
+        }
+
+        // 生成唯一文件名，移除查询参数
+        let fileName;
+        if (url.startsWith("data:") || url.startsWith("blob:")) {
+          fileName = `img_${Date.now()}_${Math.floor(
+            Math.random() * 10000,
+          )}.png`;
+        } else {
+          // 从URL中提取文件名，并移除查询参数
+          const urlObj = new URL(url);
+          const pathName = urlObj.pathname;
+          const baseName = path.basename(pathName).split("?")[0];
+
+          // 确保文件名有扩展名
+          const ext = path.extname(baseName) || ".jpg";
+          fileName = `img_${Date.now()}_${Math.floor(
+            Math.random() * 10000,
+          )}${ext}`;
+        }
+
+        const filePath = path.join(downloadDir, fileName);
+
+        // 如果是data URL或blob URL
+        if (url.startsWith("data:") || url.startsWith("blob:")) {
+          const response = await fetch(url);
+          const buffer = await response.arrayBuffer();
+          fs.writeFileSync(filePath, Buffer.from(buffer));
+          console.log("图片已保存到:", filePath);
+          return filePath;
+        }
+
+        // 设置请求选项，包括referer
+        const options: { headers: Record<string, string> } = {
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+          },
+        };
+
+        // 如果提供了referer，添加到请求头
+        if (referer) {
+          options.headers["Referer"] = referer;
+          console.log("设置Referer:", referer);
+        }
+
+        // 如果提供了原始页面URL，添加到请求头
+        if (originalUrl) {
+          options.headers["Origin"] = new URL(originalUrl).origin;
+          console.log("设置Origin:", options.headers["Origin"]);
+        }
+
+        // 对于微信图片，特殊处理
+        if (url.includes("mmbiz.qpic.cn") || url.includes("mmbiz.qlogo.cn")) {
+          // 移除查询参数
+          const cleanUrl = url.split("?")[0];
+          url = cleanUrl;
+          console.log("处理微信图片URL:", url);
+        }
+
+        // 下载图片
+        const response = await fetch(url, options);
+
+        if (!response.ok) {
+          throw new Error(
+            `图片下载失败: ${response.status} ${response.statusText}`,
+          );
+        }
+
+        const buffer = await response.arrayBuffer();
+        fs.writeFileSync(filePath, Buffer.from(buffer));
+
+        console.log("图片已保存到:", filePath);
+        return filePath;
+      } catch (error) {
+        console.error("下载图片失败:", error);
+        throw error;
+      }
+    },
+  );
+
+  // 添加save-blob-image处理程序
+  ipcMain.handle("save-blob-image", async (_, blob) => {
     try {
-      console.log("开始下载图片:", url);
+      console.log("开始保存Blob图片");
 
       // 创建下载目录
       const downloadDir = path.join(
@@ -98,58 +193,19 @@ function setupIpcHandlers(
       }
 
       // 生成唯一文件名
-      const fileName = `img_${Date.now()}_${Math.floor(Math.random() * 10000)}${
-        path.extname(url) || ".jpg"
-      }`;
+      const fileName = `img_${Date.now()}_${Math.floor(
+        Math.random() * 10000,
+      )}.png`;
       const filePath = path.join(downloadDir, fileName);
 
-      // 如果是data URL或blob URL
-      if (url.startsWith("data:") || url.startsWith("blob:")) {
-        const response = await fetch(url);
-        const buffer = await response.arrayBuffer();
-        fs.writeFileSync(filePath, Buffer.from(buffer));
-        console.log("图片已保存到:", filePath);
-        return filePath;
-      }
+      // 将blob数据写入文件
+      const buffer = Buffer.from(await blob.arrayBuffer());
+      fs.writeFileSync(filePath, buffer);
 
-      // 设置请求选项，包括referer
-      const options: { headers: Record<string, string> } = {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-        },
-      };
-
-      // 如果提供了referer，添加到请求头
-      if (referer) {
-        options.headers["Referer"] = referer;
-        console.log("设置Referer:", referer);
-      }
-
-      // 对于微信图片，特殊处理
-      if (url.includes("mmbiz.qpic.cn") || url.includes("mmbiz.qlogo.cn")) {
-        // 移除查询参数
-        const cleanUrl = url.split("?")[0];
-        url = cleanUrl;
-        console.log("处理微信图片URL:", url);
-      }
-
-      // 下载图片
-      const response = await fetch(url, options);
-
-      if (!response.ok) {
-        throw new Error(
-          `图片下载失败: ${response.status} ${response.statusText}`,
-        );
-      }
-
-      const buffer = await response.arrayBuffer();
-      fs.writeFileSync(filePath, Buffer.from(buffer));
-
-      console.log("图片已保存到:", filePath);
+      console.log("Blob图片已保存到:", filePath);
       return filePath;
     } catch (error) {
-      console.error("下载图片失败:", error);
+      console.error("保存Blob图片失败:", error);
       throw error;
     }
   });

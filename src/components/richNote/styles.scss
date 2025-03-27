@@ -29,8 +29,8 @@
   /* ===== 层级系统 ===== */
   --z-index-code-block: 10; /* 代码块层级 */
 }
-.content-title{
-  :hover{
+.content-title {
+  :hover {
     border: none !important;
     outline: none !important;
   }
@@ -60,7 +60,10 @@
   :first-child {
     margin-top: 0;
   }
-
+  img {
+    max-width: 100%;
+    height: auto;
+  }
   /* ===== 代码块样式 ===== */
   pre {
     background: var(--primary-black);
@@ -283,8 +286,8 @@
 
 /* 或更精确的层级选择 */
 div[style*="position: relative; display: inline-block;"]
-> div:first-child
-> div {
+  > div:first-child
+  > div {
   box-shadow: none !important;
 }
 

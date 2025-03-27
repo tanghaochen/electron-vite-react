@@ -93,7 +93,7 @@ async function processHTMLContent(html, editor) {
   const hasImages = elements.some((el) => el.type === "image");
   if (!hasImages) {
     console.log("HTML内容中没有图片，使用默认粘贴处理");
-    return false;
+    return false; // 这里返回false，让默认粘贴处理程序接管
   }
 
   // 清空编辑器当前选区
@@ -112,6 +112,7 @@ async function processHTMLContent(html, editor) {
 
         // 设置referer
         let referer = null;
+        let originalUrl = null;
 
         // 根据图片URL设置合适的referer
         const url = new URL(src);
@@ -120,32 +121,44 @@ async function processHTMLContent(html, editor) {
         // 常见网站的referer设置
         if (hostname.includes("csdnimg.cn") || hostname.includes("csdn.net")) {
           referer = "https://blog.csdn.net";
+          originalUrl = document.referrer || "https://blog.csdn.net";
         } else if (
           hostname.includes("mmbiz.qpic.cn") ||
           hostname.includes("mmbiz.qlogo.cn")
         ) {
           referer = "https://mp.weixin.qq.com";
+          originalUrl = document.referrer || "https://mp.weixin.qq.com";
         } else if (hostname.includes("zhimg.com")) {
           referer = "https://www.zhihu.com";
+          originalUrl = document.referrer || "https://www.zhihu.com";
         } else if (
           hostname.includes("jianshu.io") ||
           hostname.includes("jianshu.com")
         ) {
           referer = "https://www.jianshu.com";
+          originalUrl = document.referrer || "https://www.jianshu.com";
         } else if (hostname.includes("juejin.cn")) {
           referer = "https://juejin.cn";
+          originalUrl = document.referrer || "https://juejin.cn";
         } else {
           // 对于其他网站，使用图片所在域名作为referer
           referer = `${url.protocol}//${url.hostname}`;
+          originalUrl = document.referrer || `${url.protocol}//${url.hostname}`;
         }
 
         console.log("设置referer:", referer);
+        console.log("原始页面URL:", originalUrl);
+
+        // 清理URL，移除查询参数
+        const cleanSrc = src.split("?")[0];
+        console.log("清理后的URL:", cleanSrc);
 
         // 下载图片
         const localPath = await window.ipcRenderer.invoke(
           "download-image",
-          src,
+          cleanSrc,
           referer,
+          originalUrl,
         );
 
         if (localPath) {
@@ -170,6 +183,9 @@ async function processHTMLContent(html, editor) {
           editor.commands.createParagraphNear();
         } else {
           console.warn("图片下载失败，跳过:", src);
+
+          // 如果下载失败，可以选择跳过或者使用原始URL
+          // 这里我们选择跳过，不使用原始URL
         }
       } catch (error) {
         console.error("处理图片失败:", error);
@@ -215,12 +231,16 @@ async function processTextImageUrls(text, editor) {
     try {
       console.log("处理可能的图片URL:", url);
 
+      // 清理URL，移除查询参数
+      const cleanUrl = url.split("?")[0];
+      console.log("清理后的URL:", cleanUrl);
+
       // 设置referer
       let referer = null;
 
       // 根据图片URL设置合适的referer
       try {
-        const urlObj = new URL(url);
+        const urlObj = new URL(cleanUrl);
         const hostname = urlObj.hostname;
 
         // 常见网站的referer设置
@@ -251,7 +271,7 @@ async function processTextImageUrls(text, editor) {
       // 下载图片
       const localPath = await window.ipcRenderer.invoke(
         "download-image",
-        url,
+        cleanUrl,
         referer,
       );
 
@@ -296,42 +316,40 @@ export const ImagePasteHandler = Extension.create({
         key: new PluginKey("imagePasteHandler"),
         props: {
           handlePaste: async (view, event, slice) => {
-            const { state } = view;
             const { clipboardData } = event;
-
-            // 处理直接粘贴的图片文件
+            console.log(clipboardData);
+            // 1. 处理直接粘贴的图片文件（优先级最高）
             if (clipboardData.items) {
               for (let i = 0; i < clipboardData.items.length; i++) {
                 if (clipboardData.items[i].type.indexOf("image") === 0) {
-                  event.preventDefault();
                   const blob = clipboardData.items[i].getAsFile();
 
                   if (blob) {
-                    // 读取文件内容并保存到本地
-                    const reader = new FileReader();
-                    reader.onload = async (e) => {
-                      try {
-                        // 将DataURL转换为Blob
-                        const dataUrl = e.target.result;
-                        const res = await fetch(dataUrl);
-                        const imageBlob = await res.blob();
+                    try {
+                      // 将blob转为base64
+                      const reader = new FileReader();
+                      const base64Promise = new Promise((resolve) => {
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(blob);
+                      });
 
-                        // 创建临时文件URL
-                        const tempUrl = URL.createObjectURL(imageBlob);
+                      const base64 = await base64Promise;
+                      const localPath = await window.ipcRenderer.invoke(
+                        "download-image",
+                        base64,
+                      );
 
-                        // 通过IPC调用保存到本地
-                        const localPath = await window.ipcRenderer.invoke(
-                          "download-image",
-                          tempUrl,
-                        );
-
+                      if (localPath) {
                         // 格式化路径
                         let formattedPath = localPath.replace(/\\/g, "/");
                         if (!formattedPath.startsWith("/")) {
                           formattedPath = "/" + formattedPath;
                         }
 
-                        // 直接使用编辑器的addImage命令插入图片
+                        // 阻止默认行为
+                        event.preventDefault();
+
+                        // 插入图片
                         editor.commands.setImage({
                           src: `file:///${formattedPath}`,
                           alt: "粘贴的图片",
@@ -341,32 +359,23 @@ export const ImagePasteHandler = Extension.create({
                           "图片已插入编辑器:",
                           `file:///${formattedPath}`,
                         );
-
-                        // 释放临时URL
-                        URL.revokeObjectURL(tempUrl);
-                      } catch (error) {
-                        console.error("处理粘贴图片失败:", error);
+                        return true;
                       }
-                    };
-                    reader.readAsDataURL(blob);
-                    return true;
+                    } catch (error) {
+                      console.error("处理粘贴图片失败:", error);
+                    }
                   }
                 }
               }
             }
 
-            // 检查是否有HTML内容
+            // 2. 处理HTML内容中的图片
             const html = clipboardData.getData("text/html");
-            const plainText = clipboardData.getData("text/plain");
-
-            // 检查HTML内容中是否包含图片
             if (html && html.includes("<img")) {
-              event.preventDefault();
-              console.log("检测到HTML中包含图片，开始处理");
-
               try {
                 const processed = await processHTMLContent(html, editor);
                 if (processed) {
+                  event.preventDefault();
                   return true;
                 }
               } catch (error) {
@@ -374,26 +383,35 @@ export const ImagePasteHandler = Extension.create({
               }
             }
 
-            // 处理纯文本中可能包含的图片URL
+            // 3. 处理纯文本中的图片URL
+            const plainText = clipboardData.getData("text/plain");
+            console.log(">>>", plainText, html);
             if (plainText) {
-              console.log("检查纯文本中是否包含图片URL");
-
-              try {
-                const processed = await processTextImageUrls(plainText, editor);
-
-                if (processed) {
-                  event.preventDefault();
-                  console.log("从文本中提取并处理了图片URL");
-                  return true;
+              const urlRegex =
+                /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)(\?[^\s]*)?)/gi;
+              if (urlRegex.test(plainText)) {
+                try {
+                  const processed = await processTextImageUrls(
+                    plainText,
+                    editor,
+                  );
+                  if (processed) {
+                    event.preventDefault();
+                    return true;
+                  }
+                } catch (error) {
+                  console.error("处理文本中的图片URL失败:", error);
                 }
-                // 如果没有图片，让编辑器处理默认粘贴
-              } catch (error) {
-                console.error("处理文本中的图片URL失败:", error);
               }
             }
-
-            // 对于其他内容，让编辑器处理默认粘贴行为
-            return false;
+            // 检查是否有HTML内容
+            // const html = clipboardData.getData("text/html");
+            // const plainText = clipboardData.getData("text/plain");
+            // 4. 对于所有其他情况，使用默认粘贴行为
+            console.log(plainText, html);
+            console.log("使用默认粘贴行为");
+            editor.commands.insertContent(html);
+            return true;
           },
         },
       }),
