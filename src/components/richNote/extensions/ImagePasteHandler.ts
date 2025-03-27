@@ -1,9 +1,9 @@
 import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 
-// 处理微信公众号文章的特殊函数
-async function processWechatArticle(html, editor) {
-  console.log("检测到可能是微信公众号文章，使用特殊处理");
+// 通用HTML内容处理函数
+async function processHTMLContent(html, editor) {
+  console.log("处理HTML内容");
 
   // 创建DOM解析器
   const parser = new DOMParser();
@@ -89,6 +89,13 @@ async function processWechatArticle(html, editor) {
 
   console.log(`提取了${elements.length}个内容元素`);
 
+  // 检查是否有图片
+  const hasImages = elements.some((el) => el.type === "image");
+  if (!hasImages) {
+    console.log("HTML内容中没有图片，使用默认粘贴处理");
+    return false;
+  }
+
   // 清空编辑器当前选区
   editor.commands.deleteSelection();
 
@@ -105,14 +112,34 @@ async function processWechatArticle(html, editor) {
 
         // 设置referer
         let referer = null;
-        if (src.includes("mmbiz.qpic.cn") || src.includes("mmbiz.qlogo.cn")) {
-          referer = "https://mp.weixin.qq.com";
-          console.log("检测到微信公众号图片，设置referer:", referer);
-        } else if (src.includes("csdnimg.cn") || src.includes("csdn.net")) {
+
+        // 根据图片URL设置合适的referer
+        const url = new URL(src);
+        const hostname = url.hostname;
+
+        // 常见网站的referer设置
+        if (hostname.includes("csdnimg.cn") || hostname.includes("csdn.net")) {
           referer = "https://blog.csdn.net";
-        } else if (src.includes("zhimg.com")) {
+        } else if (
+          hostname.includes("mmbiz.qpic.cn") ||
+          hostname.includes("mmbiz.qlogo.cn")
+        ) {
+          referer = "https://mp.weixin.qq.com";
+        } else if (hostname.includes("zhimg.com")) {
           referer = "https://www.zhihu.com";
+        } else if (
+          hostname.includes("jianshu.io") ||
+          hostname.includes("jianshu.com")
+        ) {
+          referer = "https://www.jianshu.com";
+        } else if (hostname.includes("juejin.cn")) {
+          referer = "https://juejin.cn";
+        } else {
+          // 对于其他网站，使用图片所在域名作为referer
+          referer = `${url.protocol}//${url.hostname}`;
         }
+
+        console.log("设置referer:", referer);
 
         // 下载图片
         const localPath = await window.ipcRenderer.invoke(
@@ -188,19 +215,37 @@ async function processTextImageUrls(text, editor) {
     try {
       console.log("处理可能的图片URL:", url);
 
-      // 检查是否已经是本地路径
-      if (url.startsWith("file://")) {
-        continue;
-      }
-
       // 设置referer
       let referer = null;
-      if (url.includes("mmbiz.qpic.cn") || url.includes("mmbiz.qlogo.cn")) {
-        referer = "https://mp.weixin.qq.com";
-      } else if (url.includes("csdnimg.cn") || url.includes("csdn.net")) {
-        referer = "https://blog.csdn.net";
-      } else if (url.includes("zhimg.com")) {
-        referer = "https://www.zhihu.com";
+
+      // 根据图片URL设置合适的referer
+      try {
+        const urlObj = new URL(url);
+        const hostname = urlObj.hostname;
+
+        // 常见网站的referer设置
+        if (hostname.includes("csdnimg.cn") || hostname.includes("csdn.net")) {
+          referer = "https://blog.csdn.net";
+        } else if (
+          hostname.includes("mmbiz.qpic.cn") ||
+          hostname.includes("mmbiz.qlogo.cn")
+        ) {
+          referer = "https://mp.weixin.qq.com";
+        } else if (hostname.includes("zhimg.com")) {
+          referer = "https://www.zhihu.com";
+        } else if (
+          hostname.includes("jianshu.io") ||
+          hostname.includes("jianshu.com")
+        ) {
+          referer = "https://www.jianshu.com";
+        } else if (hostname.includes("juejin.cn")) {
+          referer = "https://juejin.cn";
+        } else {
+          // 对于其他网站，使用图片所在域名作为referer
+          referer = `${urlObj.protocol}//${urlObj.hostname}`;
+        }
+      } catch (e) {
+        console.error("解析URL失败:", e);
       }
 
       // 下载图片
@@ -211,7 +256,7 @@ async function processTextImageUrls(text, editor) {
       );
 
       if (localPath) {
-        console.log("图片URL下载成功，新路径:", localPath);
+        console.log("图片下载成功，新路径:", localPath);
 
         // 格式化路径
         let formattedPath = localPath.replace(/\\/g, "/");
@@ -219,20 +264,21 @@ async function processTextImageUrls(text, editor) {
           formattedPath = "/" + formattedPath;
         }
 
-        // 直接使用编辑器的addImage命令插入图片
-        editor.commands.createParagraphNear();
+        // 直接使用编辑器的setImage命令插入图片
         editor.commands.setImage({
           src: `file:///${formattedPath}`,
-          alt: "粘贴的图片",
+          alt: "图片",
         });
-        editor.commands.createParagraphNear();
 
         console.log("图片已插入编辑器:", `file:///${formattedPath}`);
+
+        // 确保图片后有一个空行
+        editor.commands.createParagraphNear();
       } else {
         console.warn("图片下载失败，跳过:", url);
       }
     } catch (error) {
-      console.error("处理图片失败:", error);
+      console.error("处理图片URL失败:", error);
     }
   }
 
@@ -313,23 +359,18 @@ export const ImagePasteHandler = Extension.create({
             const html = clipboardData.getData("text/html");
             const plainText = clipboardData.getData("text/plain");
 
-            // 检测是否是微信公众号文章
-            if (
-              html &&
-              (html.includes("mmbiz.qpic.cn") ||
-                html.includes("mmbiz.qlogo.cn") ||
-                html.includes("mp.weixin.qq.com"))
-            ) {
+            // 检查HTML内容中是否包含图片
+            if (html && html.includes("<img")) {
               event.preventDefault();
-              console.log("检测到可能是微信公众号内容");
+              console.log("检测到HTML中包含图片，开始处理");
 
               try {
-                const processed = await processWechatArticle(html, editor);
+                const processed = await processHTMLContent(html, editor);
                 if (processed) {
                   return true;
                 }
               } catch (error) {
-                console.error("处理微信公众号内容失败:", error);
+                console.error("处理HTML内容失败:", error);
               }
             }
 
@@ -361,4 +402,4 @@ export const ImagePasteHandler = Extension.create({
 });
 
 // 导出处理函数以便在其他地方使用
-export { processWechatArticle, processTextImageUrls };
+export { processHTMLContent, processTextImageUrls };
