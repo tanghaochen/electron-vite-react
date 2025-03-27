@@ -86,7 +86,7 @@ export default function BasicTabs({ worksItem, setWorksItem, setWorksList }) {
           ))}
         </TabList>
 
-        <div className={"w-auto w-fit px-24 overscroll-auto"}>
+        <div className={"w-auto w-fit px-24 overflow-auto"}>
           {tabs.map((tab) => (
             <TabPanel key={tab.value}>
               <RichNote
