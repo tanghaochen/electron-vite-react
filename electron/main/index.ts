@@ -86,7 +86,13 @@ function setupIpcHandlers(
   // 设置图片下载IPC处理程序
   ipcMain.handle(
     "download-image",
-    async (_, url, referer?: string, originalUrl?: string) => {
+    async (
+      _,
+      url,
+      referer?: string,
+      originalUrl?: string,
+      isByteDance?: boolean,
+    ) => {
       try {
         console.log("开始下载图片:", url);
 
@@ -147,6 +153,20 @@ function setupIpcHandlers(
         if (originalUrl) {
           options.headers["Origin"] = new URL(originalUrl).origin;
           console.log("设置Origin:", options.headers["Origin"]);
+        }
+
+        // 对于字节跳动图片的特殊处理
+        if (isByteDance) {
+          console.log("检测到字节跳动图片，使用特殊处理");
+          options.headers["Referer"] = "https://juejin.cn";
+          options.headers["Origin"] = "https://juejin.cn";
+          options.headers["Cookie"] = ""; // 可能需要添加特定的Cookie
+          options.headers["Accept"] =
+            "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8";
+          options.headers["Accept-Language"] = "zh-CN,zh;q=0.9,en;q=0.8";
+          options.headers["Sec-Fetch-Dest"] = "image";
+          options.headers["Sec-Fetch-Mode"] = "no-cors";
+          options.headers["Sec-Fetch-Site"] = "cross-site";
         }
 
         // 对于微信图片，特殊处理

@@ -140,6 +140,79 @@ async function processHTMLContent(html, editor) {
         } else if (hostname.includes("juejin.cn")) {
           referer = "https://juejin.cn";
           originalUrl = document.referrer || "https://juejin.cn";
+        } else if (
+          hostname.includes("byteimg.com") ||
+          hostname.includes("toutiao.com") ||
+          hostname.includes("douyin.com") ||
+          hostname.includes("bytedance.com") ||
+          hostname.includes("feishu.cn")
+        ) {
+          // 字节跳动相关网站
+          referer = "https://juejin.cn";
+          originalUrl = document.referrer || "https://juejin.cn";
+
+          // 对于字节跳动的图片，我们需要保留查询参数
+          const cleanSrc = src; // 不清理URL，保留所有参数
+          console.log("字节跳动图片，保留完整URL:", cleanSrc);
+
+          try {
+            // 尝试下载图片
+            const localPath = await window.ipcRenderer.invoke(
+              "download-image",
+              cleanSrc,
+              referer,
+              originalUrl,
+              true, // 标记为字节跳动图片
+            );
+
+            if (localPath) {
+              console.log("图片下载成功，新路径:", localPath);
+
+              // 格式化路径
+              let formattedPath = localPath.replace(/\\/g, "/");
+              if (!formattedPath.startsWith("/")) {
+                formattedPath = "/" + formattedPath;
+              }
+
+              // 直接使用编辑器的setImage命令插入图片
+              editor.commands.setImage({
+                src: `file:///${formattedPath}`,
+                alt: element.alt,
+                title: element.alt,
+              });
+
+              console.log("图片已插入编辑器:", `file:///${formattedPath}`);
+
+              // 确保图片后有一个空行
+              editor.commands.createParagraphNear();
+            } else {
+              console.warn("字节跳动图片下载失败，尝试直接插入原始URL");
+
+              // 对于字节跳动的图片，如果下载失败，直接使用原始URL
+              editor.commands.setImage({
+                src: src,
+                alt: element.alt || "图片",
+                title: element.alt,
+              });
+
+              // 确保图片后有一个空行
+              editor.commands.createParagraphNear();
+            }
+          } catch (error) {
+            console.error("处理字节跳动图片失败:", error);
+
+            // 如果处理失败，直接使用原始URL
+            editor.commands.setImage({
+              src: src,
+              alt: element.alt || "图片",
+              title: element.alt,
+            });
+
+            // 确保图片后有一个空行
+            editor.commands.createParagraphNear();
+          }
+
+          continue; // 跳过后续处理
         } else {
           // 对于其他网站，使用图片所在域名作为referer
           referer = `${url.protocol}//${url.hostname}`;
