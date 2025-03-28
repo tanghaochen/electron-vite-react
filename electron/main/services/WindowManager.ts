@@ -15,15 +15,27 @@ export class WindowManager {
   }
 
   async createMainWindow() {
+    // 获取所有显示器
+    const displays = screen.getAllDisplays();
+    // 获取主显示器
+    const primaryDisplay = screen.getPrimaryDisplay();
+    // 获取主显示器之外的第一个显示器（如果存在）
+    const externalDisplay = displays.find(
+      (display) => display.id !== primaryDisplay.id,
+    );
+
+    // 窗口配置
     this.win = new BrowserWindow({
       title: "Main window",
       icon: path.join(process.env.VITE_PUBLIC, "favicon.ico"),
-      x: 850,
-      y: 500,
-      width: 1200,
-      height: 800,
+      // 如果有外部显示器，则在外部显示器上显示
+      x: externalDisplay ? externalDisplay.bounds.x + 50 : 850,
+      y: externalDisplay ? externalDisplay.bounds.y + 50 : 500,
+      width: externalDisplay ? externalDisplay.bounds.width - 100 : 1200,
+      height: externalDisplay ? externalDisplay.bounds.height - 100 : 800,
       autoHideMenuBar: true,
-      alwaysOnTop: true,
+      // 取消置顶
+      alwaysOnTop: false,
       webPreferences: {
         devTools: true,
         preload: this.preload,
@@ -32,6 +44,25 @@ export class WindowManager {
         experimentalFeatures: true,
       },
     });
+
+    // 如果有外部显示器，设置全屏
+    if (externalDisplay) {
+      console.log("检测到外部显示器，设置窗口在外部显示器上");
+      console.log("外部显示器信息:", externalDisplay.bounds);
+
+      // 先移动窗口到外部显示器
+      this.win.setBounds({
+        x: externalDisplay.bounds.x,
+        y: externalDisplay.bounds.y,
+        width: externalDisplay.bounds.width,
+        height: externalDisplay.bounds.height,
+      });
+
+      // 然后设置全屏
+      // setTimeout(() => {
+      //   this.win.setFullScreen(true);
+      // }, 500);
+    }
 
     if (this.viteDevServerUrl) {
       this.win.loadURL(this.viteDevServerUrl);

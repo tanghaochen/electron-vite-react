@@ -42,6 +42,7 @@ import { noteContentDB } from "@/database/noteContentDB";
 import "./styles.scss";
 import { ImagePasteHandler } from "./extensions/ImagePasteHandler";
 import { CustomImage } from "./extensions/CustomImage";
+import { ImageUpdateHandler } from "./extensions/ImageUpdateHandler";
 const lowlight = createLowlight(all);
 lowlight.register("html", html);
 lowlight.register("css", css);
@@ -50,6 +51,11 @@ lowlight.register("ts", ts);
 //
 const extensions = [
   StarterKit.configure({
+    italic: false,
+    blockquote: false,
+    listItem: false,
+    codeBlock: false,
+    text: false,
     image: true,
   }),
   Color.configure({ types: [TextStyle.name, ListItem.name] }),
@@ -60,7 +66,7 @@ const extensions = [
     HTMLAttributes: {
       class: "my-custom-class",
     },
-    inline: false,
+    inline: true,
     allowBase64: true,
   }),
   Italic,
@@ -87,7 +93,8 @@ const extensions = [
   TaskList,
   Text,
   TaskItem.configure({}),
-  ImagePasteHandler,
+  // ImagePasteHandler,
+  ImageUpdateHandler,
 ];
 
 export default ({

@@ -477,14 +477,13 @@ export const ImagePasteHandler = Extension.create({
                 }
               }
             }
-            // 检查是否有HTML内容
-            // const html = clipboardData.getData("text/html");
-            // const plainText = clipboardData.getData("text/plain");
+
             // 4. 对于所有其他情况，使用默认粘贴行为
-            console.log(plainText, html);
-            console.log("使用默认粘贴行为");
-            editor.commands.insertContent(html);
-            return true;
+            // 修复重复插入问题：移除这一行，让默认处理机制接管
+            // editor.commands.insertContent(html);
+
+            // 返回false让默认粘贴处理程序接管
+            return false;
           },
         },
       }),
