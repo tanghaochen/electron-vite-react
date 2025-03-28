@@ -1,23 +1,99 @@
-.noteHightLightRoot{
+.noteHightLightRoot {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
+  background-color: #ffffff;
+  overflow: hidden; // 防止整个容器滚动
+  // border-radius: 0.375rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+  // 可拖拽区域
+  .draggable-area {
+    -webkit-app-region: drag;
+    height: 30px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+  }
+
+  // 控制栏样式
+  .control-bar {
+    -webkit-app-region: drag; // 使控制栏可拖拽
+    padding: 8px;
+    height: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    overflow: hidden; // 防止控制栏滚动
+
+    .control-buttons {
+      -webkit-app-region: no-drag; // 按钮区域不可拖拽
+      display: flex;
+      gap: 8px;
+
+      button {
+        min-width: 32px;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border-radius: 4px;
+
+        svg {
+          font-size: 18px;
+        }
+      }
+    }
+  }
+
+  // 关键词容器样式
+  .keywords-container {
+    background-color: #f9fafb;
+    padding: 8px;
+    max-height: 5rem;
+    overflow-y: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  // 全内容容器样式
+  .full-content-container {
+    background-color: #ffffff;
+    // border-radius: 8px;
+    padding: 0;
+    margin: 8px;
+    height: calc(100% - 16px);
+    overflow: hidden; // 防止容器本身滚动
+    display: flex;
+    flex-direction: column;
+  }
 }
-// styles/index.scss 中添加以下样式
+
+// 高亮器容器样式
 .highlighter-container {
+  flex: 1;
+  overflow: hidden; // 防止整个高亮器容器滚动
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 
   .content-preview {
     flex: 1;
     min-width: 300px;
     background: #fff;
-    overflow: hidden;
+    overflow: hidden; // 防止整个预览区域滚动
     display: flex;
     height: 100%;
     flex-direction: column;
-    white-space: pre-wrap; // 保留换行
-    word-break: break-word; // 防止长文本溢出
+    white-space: pre-wrap;
+    word-break: break-word;
+
     &-target {
       margin-right: 1px;
     }
@@ -34,9 +110,10 @@
       color: #2d3436;
       display: flex;
       align-items: center;
+      flex-shrink: 0; // 防止标题区域被压缩
 
       &::before {
-        content: '';
+        content: "";
         display: block;
         width: 4px;
         height: 16px;
@@ -46,10 +123,11 @@
       }
     }
 
+    // 只有内容区域可以滚动
     > div:last-child {
       flex: 1;
       padding: 16px;
-      overflow-y: auto;
+      overflow-y: auto; // 允许内容区域垂直滚动
       line-height: 1.6;
       color: #424242;
       font-size: 14px;
@@ -67,35 +145,24 @@
       &::-webkit-scrollbar-thumb {
         background: #c1c1c1;
         border-radius: 3px;
-        &:hover {
-          background: #a8a8a8;
-        }
+      }
+
+      &::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
       }
     }
   }
 
+  // 高亮样式
   .highlight {
-    background: #fff3bf;
-    padding: 2px 4px;
-    border-radius: 3px;
+    background-color: #fff8c5;
+    border-radius: 2px;
+    padding: 0 2px;
     cursor: pointer;
-    transition: all 0.2s;
-    color: #2d3436;
+    transition: background-color 0.2s;
 
     &:hover {
-      background: #ffe066;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
-    &[data-id] {
-      position: relative;
-
-      &::after {
-        content: '📌';
-        font-size: 0.8em;
-        margin-left: 4px;
-        opacity: 0.6;
-      }
+      background-color: #ffe066;
     }
   }
 }

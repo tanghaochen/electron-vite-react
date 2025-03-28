@@ -112,7 +112,10 @@ export class WindowManager {
       const globelMousePoint = screen.getCursorScreenPoint();
       this.win2 = new BrowserWindow({
         title: "Dashboard",
-        frame: true,
+        frame: false,
+        transparent: true,
+        backgroundColor: "#00000000", // 完全透明的背景色
+        hasShadow: true, // 启用窗口阴影
         autoHideMenuBar: true,
         width: 940,
         height: 550,
