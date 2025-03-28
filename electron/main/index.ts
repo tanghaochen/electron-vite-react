@@ -234,6 +234,15 @@ function setupIpcHandlers(
   ipcMain.handle("open-win", (_, arg) => {
     return windowManager.createChildWindow(arg);
   });
+
+  // 添加处理固定窗口的IPC处理程序
+  ipcMain.on("pin-window", (_, isPinned) => {
+    const secondaryWindow = windowManager.getSecondaryWindow();
+    if (secondaryWindow && !secondaryWindow.isDestroyed()) {
+      // 将消息转发到窗口的webContents
+      secondaryWindow.webContents.send("pin-window", isPinned);
+    }
+  });
 }
 
 // 设置应用程序事件

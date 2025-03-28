@@ -114,7 +114,7 @@ export class WindowManager {
         title: "Dashboard",
         frame: false,
         transparent: true,
-        backgroundColor: "#00000000", // 完全透明的背景色
+        backgroundColor: "white", // 完全透明的背景色
         hasShadow: true, // 启用窗口阴影
         autoHideMenuBar: true,
         width: 940,
@@ -125,11 +125,66 @@ export class WindowManager {
           preload: this.preload,
         },
       });
+
+      // 添加鼠标离开窗口的检测
+      let mouseLeaveTimeout: NodeJS.Timeout | null = null;
+      let isPinned = false;
+
+      // 监听从渲染进程发来的固定窗口消息
+      this.win2.webContents.on("ipc-message", (event, channel, ...args) => {
+        if (channel === "pin-window") {
+          isPinned = args[0];
+          // 如果取消固定且有定时器，重新开始计时
+          if (!isPinned && mouseLeaveTimeout) {
+            clearTimeout(mouseLeaveTimeout);
+            mouseLeaveTimeout = setTimeout(() => {
+              if (
+                this.win2 &&
+                !this.win2.isDestroyed() &&
+                !this.win2.isFocused()
+              ) {
+                this.win2.hide();
+              }
+            }, 3000);
+          }
+        }
+      });
+
+      // 监听鼠标进入窗口事件
+      this.win2.on("focus", () => {
+        if (mouseLeaveTimeout) {
+          clearTimeout(mouseLeaveTimeout);
+          mouseLeaveTimeout = null;
+        }
+      });
+
+      // 监听鼠标离开窗口事件
+      this.win2.on("blur", () => {
+        // 如果窗口没有被固定，则设置定时器
+        if (!isPinned) {
+          if (mouseLeaveTimeout) {
+            clearTimeout(mouseLeaveTimeout);
+          }
+          mouseLeaveTimeout = setTimeout(() => {
+            if (
+              this.win2 &&
+              !this.win2.isDestroyed() &&
+              !this.win2.isFocused()
+            ) {
+              this.win2.hide();
+            }
+          }, 3000);
+        }
+      });
+
       this.win2.webContents.openDevTools();
       if (this.viteDevServerUrl)
         this.win2.loadURL(this.viteDevServerUrl + "dashboard");
       this.win2.on("closed", () => {
         this.win2 = undefined;
+        if (mouseLeaveTimeout) {
+          clearTimeout(mouseLeaveTimeout);
+        }
       });
     }, 1);
   }
