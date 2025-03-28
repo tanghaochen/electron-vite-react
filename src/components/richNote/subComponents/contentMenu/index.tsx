@@ -1,5 +1,5 @@
 import { useCurrentEditor } from "@tiptap/react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Button from "@mui/material/Button";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
 import FormControl from "@mui/material/FormControl";
@@ -25,6 +25,14 @@ const MenuBar = ({
 }) => {
   const { editor } = useCurrentEditor();
   const [inputTitleValue, setInputTitleValue] = useState(tabItem.label);
+  const editorRef = useRef(null);
+
+  // 当编辑器实例变化时更新引用
+  useEffect(() => {
+    if (editor) {
+      editorRef.current = editor;
+    }
+  }, [editor]);
 
   if (!editor) {
     return null;
@@ -40,6 +48,20 @@ const MenuBar = ({
     const toggleFun =
       toggleFunName || `toggle${extType[0].toUpperCase()}${extType.slice(1)}`;
 
+    // 直接定义点击处理函数，不使用回调
+    const handleClick = (e) => {
+      e.preventDefault(); // 阻止默认行为
+      e.stopPropagation(); // 阻止事件冒泡
+
+      // 确保编辑器获得焦点
+      editor.commands.focus();
+
+      // 直接执行命令，不使用链式API
+      if (typeof editor.commands[toggleFun] === "function") {
+        editor.commands[toggleFun]();
+      }
+    };
+
     return (
       <Button
         color="#000000"
@@ -48,7 +70,8 @@ const MenuBar = ({
           backgroundColor: editor?.isActive(extType) ? "#E7E9E8" : "",
           height: "100%",
         }}
-        onClick={() => editor?.chain().focus()[toggleFun]?.().run()}
+        onMouseDown={handleClick} // 使用onMouseDown而不是onClick
+        disabled={externalDisabled}
       >
         <span className="material-symbols-outlined">
           {iconName || `format_${extType}`}
@@ -56,8 +79,8 @@ const MenuBar = ({
       </Button>
     );
   };
+
   const handleInputTitleBlur = () => {
-    // setRichTextTitleInputValue(inputTitleValue)
     // 更新tab标题数据
     setTabs((tabs) => {
       return tabs.map((tab) => {
@@ -79,25 +102,20 @@ const MenuBar = ({
       });
     });
     console.log("tabItem", tabItem);
-    // // 同步数据库
+    // 同步数据库
     worksListDB.updateMetadata(tabItem.value, {
       title: inputTitleValue,
     });
   };
 
-  // useEffect(() => {
-  //     setInputTitleValue(activeTabsItem.label)
-  // }, [activeTabsItem])
-
   return (
     <div className="control-group sticky top-0 z-10 bg-white">
       <div className="button-group inline-flex justify-start align-middle overflow-auto">
-        {/*ChromePicker,CompactPicker,GithubPicker, HuePicker, HuePicker,PhotoshopPicker,SketchPicker*/}
         <HeadingSelector
           editor={editor}
           inputTitleValue={inputTitleValue}
           setTabs={setTabs}
-          tabItem={setTabs}
+          tabItem={tabItem} // 修正这里的错误，应该传递tabItem而不是setTabs
           setWorksList={setWorksList}
         />
 
@@ -118,27 +136,7 @@ const MenuBar = ({
         {textAlignTypeList.map((item, index) => {
           return <CommonBtn key={index} {...item} />;
         })}
-        {/* <button onClick={() => editor.chain().focus().setHardBreak().run()}>
-          Hard break
-        </button> */}
-        {/*<button*/}
-        {/*    onClick={() => editor.chain().focus().undo().run()}*/}
-        {/*    disabled={!editor.can().chain().focus().undo().run()}*/}
-        {/*>*/}
-        {/*    Undo*/}
-        {/*</button>*/}
-        {/*<button*/}
-        {/*    onClick={() => editor.chain().focus().redo().run()}*/}
-        {/*    disabled={!editor.can().chain().focus().redo().run()}*/}
-        {/*>*/}
-        {/*    Redo*/}
-        {/*</button>*/}
       </div>
-      {/*<input*/}
-      {/*    onKeyDown={(e) => {*/}
-      {/*        e.stopPropagation();*/}
-      {/*        if (e.key === "Enter") (e.target as HTMLInputElement).blur();*/}
-      {/*    }}*/}
       <div className="w-full my-4">
         <input
           className="border-none w-full font-bold text-4xl content-title focus:ring-0"
