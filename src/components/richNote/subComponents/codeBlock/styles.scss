@@ -1,0 +1,126 @@
+.code-block-component {
+  margin: 1rem 0;
+  border-radius: var(--radius-base);
+  overflow: hidden;
+  border: 1px solid #2d3748;
+  background-color: var(--primary-black, #1a1a1a);
+
+  .code-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem;
+    background-color: #2d3748;
+
+    .language-selector {
+      position: relative;
+
+      .language-button {
+        display: flex;
+        align-items: center;
+        padding: 0.375rem 0.75rem;
+        background-color: #4a5568;
+        color: white;
+        border: none;
+        border-radius: var(--radius-base);
+        cursor: pointer;
+        font-size: 0.875rem;
+
+        .material-symbols-outlined {
+          margin-left: 0.25rem;
+          font-size: 1rem;
+        }
+
+        &:hover {
+          background-color: #2b6cb0;
+        }
+
+        &:focus {
+          outline: none;
+        }
+      }
+
+      .language-list {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: var(--z-index-code-block);
+        width: 150px;
+        max-height: 200px;
+        overflow-y: auto;
+        background-color: #2d3748;
+        border-radius: var(--radius-base);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+
+        .language-item {
+          padding: 0.5rem;
+          cursor: pointer;
+          color: #e2e8f0;
+
+          &:hover {
+            background-color: #4a5568;
+          }
+
+          &.selected {
+            background-color: #2b6cb0;
+            color: #ebf8ff;
+          }
+        }
+      }
+    }
+
+    .copy-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.375rem 0.75rem;
+      background-color: #4299e1;
+      color: white;
+      border: none;
+      border-radius: var(--radius-base);
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: background-color 0.2s;
+
+      .material-symbols-outlined {
+        margin-right: 0.25rem;
+        font-size: 1rem;
+      }
+
+      &:hover {
+        background-color: #3182ce;
+      }
+
+      &:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+      }
+    }
+  }
+
+  pre {
+    margin: 0;
+    padding: 1rem;
+    overflow-x: auto;
+    font-family: var(
+      --code-font-family,
+      "SFMono-Regular",
+      Consolas,
+      "Liberation Mono",
+      Menlo,
+      monospace
+    );
+    font-size: var(--code-font-size, 0.875rem);
+    line-height: 1.5;
+    background-color: var(--primary-black, #1a1a1a);
+    color: var(--primary-white, #f8f9fa);
+
+    code {
+      font-family: inherit;
+      display: block;
+      white-space: pre-wrap;
+      word-break: break-all;
+      tab-size: 2;
+    }
+  }
+}

@@ -43,6 +43,7 @@ import "./styles.scss";
 import { ImagePasteHandler } from "./extensions/ImagePasteHandler";
 import { CustomImage } from "./extensions/CustomImage";
 import { ImageUpdateHandler } from "./extensions/ImageUpdateHandler";
+import { CustomCodeBlock } from "./extensions/CustomCodeBlock";
 const lowlight = createLowlight(all);
 lowlight.register("html", html);
 lowlight.register("css", css);
@@ -95,6 +96,7 @@ const extensions = [
   TaskItem.configure({}),
   // ImagePasteHandler,
   ImageUpdateHandler,
+  CustomCodeBlock,
 ];
 
 export default ({
