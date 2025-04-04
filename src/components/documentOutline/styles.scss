@@ -1,0 +1,59 @@
+.document-outline {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #f8f8f8;
+
+  .outline-header {
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .rct-tree-root {
+    padding: 0.5rem;
+
+    .rct-tree-item-title {
+      color: #333;
+      font-size: 0.9rem;
+      padding: 0.25rem 0;
+    }
+
+    .outline-item {
+      display: block;
+      padding: 4px 8px;
+      border-radius: 4px;
+
+      &.active {
+        background-color: #e6f7ff;
+        color: #1890ff;
+        font-weight: 500;
+      }
+
+      &.level-1 {
+        padding-left: 0.5rem;
+        font-weight: 600;
+      }
+      &.level-2 {
+        padding-left: 1rem;
+      }
+      &.level-3 {
+        padding-left: 1.5rem;
+      }
+      &.level-4 {
+        padding-left: 2rem;
+      }
+      &.level-5 {
+        padding-left: 2.5rem;
+      }
+      &.level-6 {
+        padding-left: 3rem;
+      }
+    }
+  }
+
+  .empty-outline {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

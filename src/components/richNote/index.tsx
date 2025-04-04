@@ -44,6 +44,8 @@ import { ImagePasteHandler } from "./extensions/ImagePasteHandler";
 import { CustomImage } from "./extensions/CustomImage";
 import { ImageUpdateHandler } from "./extensions/ImageUpdateHandler";
 import { CustomCodeBlock } from "./extensions/CustomCodeBlock";
+import { HeadingWithId } from "./extensions/HeadingWithId";
+
 const lowlight = createLowlight(all);
 lowlight.register("html", html);
 lowlight.register("css", css);
@@ -58,7 +60,9 @@ const extensions = [
     codeBlock: false,
     text: false,
     image: true,
+    heading: false,
   }),
+  HeadingWithId,
   Color.configure({ types: [TextStyle.name, ListItem.name] }),
   TextStyle.configure({ types: [ListItem.name] }),
   Highlight.configure({ multicolor: true }),
@@ -105,6 +109,7 @@ export default ({
   setActiveTabsItem,
   setTabs,
   setWorksList,
+  setCurrentEditor,
 }) => {
   const [richTextTitleInputValue, setRichTextTitleInputValue] = useState("");
   const editor = useEditor({
@@ -117,6 +122,20 @@ export default ({
       // 这里为了简单起见，暂不实现，但建议在实际应用中添加
     },
   });
+
+  // 将编辑器实例传递给父组件
+  useEffect(() => {
+    if (editor) {
+      setCurrentEditor(editor);
+    }
+
+    return () => {
+      if (editor) {
+        setCurrentEditor(null);
+      }
+    };
+  }, [editor, setCurrentEditor]);
+
   const handleTPBlur = (e) => {
     // 获取改变的内容
     const TPContent = e.editor.getHTML();

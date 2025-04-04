@@ -8,7 +8,13 @@ import { noteContentDB } from "@/database/noteContentDB";
 import { IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
-export default function BasicTabs({ worksItem, setWorksItem, setWorksList }) {
+export default function BasicTabs({
+  worksItem,
+  setWorksItem,
+  setWorksList,
+  setCurrentEditor,
+  setCurrentTab,
+}) {
   const [tabs, setTabs] = React.useState([]);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const [activeTabsItem, setActiveTabsItem] = React.useState({});
@@ -18,7 +24,17 @@ export default function BasicTabs({ worksItem, setWorksItem, setWorksList }) {
     if (tabs.length > 0 && selectedIndex >= tabs.length) {
       setSelectedIndex(tabs.length - 1);
     }
-  }, [tabs]);
+
+    // 更新当前活动标签
+    if (tabs.length > 0 && selectedIndex >= 0 && selectedIndex < tabs.length) {
+      const currentTab = tabs[selectedIndex];
+      setCurrentTab(currentTab);
+      setActiveTabsItem(currentTab); // 确保更新活动标签项
+    } else {
+      setCurrentTab(null);
+      setActiveTabsItem(null);
+    }
+  }, [tabs, selectedIndex, setCurrentTab]);
 
   // 添加新标签页
   useEffect(() => {
@@ -95,6 +111,7 @@ export default function BasicTabs({ worksItem, setWorksItem, setWorksList }) {
                 setTabs={setTabs}
                 setActiveTabsItem={setActiveTabsItem}
                 setWorksList={setWorksList}
+                setCurrentEditor={setCurrentEditor}
               />
             </TabPanel>
           ))}
