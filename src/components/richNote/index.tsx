@@ -110,6 +110,7 @@ export default ({
   setTabs,
   setWorksList,
   setCurrentEditor,
+  setActiveRichTextEditor,
 }) => {
   const [richTextTitleInputValue, setRichTextTitleInputValue] = useState("");
   const editor = useEditor({
@@ -120,6 +121,10 @@ export default ({
       const content = editor.getHTML();
       // 避免在每次更新时都处理图片，可以设置节流或防抖
       // 这里为了简单起见，暂不实现，但建议在实际应用中添加
+    },
+    onFocus: ({ editor }) => {
+      console.log("onFocus");
+      setActiveRichTextEditor(editor);
     },
   });
 
@@ -143,6 +148,11 @@ export default ({
     noteContentDB.updateContent(tabItem.value, TPContent);
   };
 
+  const handleTPFocus = (e) => {
+    console.log("handleTPFocus");
+    setActiveRichTextEditor(e.editor);
+  };
+
   return (
     <EditorProvider
       slotBefore={
@@ -158,6 +168,7 @@ export default ({
       extensions={extensions}
       content={tabItem.content}
       onBlur={handleTPBlur}
+      onFocus={handleTPFocus}
     ></EditorProvider>
   );
 };

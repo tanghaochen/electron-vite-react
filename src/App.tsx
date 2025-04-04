@@ -20,6 +20,7 @@ function App() {
   const [worksList, setWorksList] = useState([]);
   const [currentEditor, setCurrentEditor] = useState(null);
   const [currentTab, setCurrentTab] = useState(null);
+  const [activeRichTextEditor, setActiveRichTextEditor] = useState(null);
 
   useEffect(() => {
     console.log("selectedTag", selectedTag);
@@ -48,9 +49,14 @@ function App() {
         setWorksList={setWorksList}
         setCurrentEditor={setCurrentEditor}
         setCurrentTab={setCurrentTab}
+        setActiveRichTextEditor={setActiveRichTextEditor}
       ></NoteContentOutline>
       <div className="tableOfContents w-96 h-full bg-gray-50 border-0 border-l-2 border-solid border-l-gray-300">
-        <DocumentOutline editor={currentEditor} activeTabsItem={currentTab} />
+        <DocumentOutline
+          editor={activeRichTextEditor}
+          activeTabsItem={currentTab}
+          // activeRichTextEditor={activeRichTextEditor}
+        />
       </div>
     </div>
   );

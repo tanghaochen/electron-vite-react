@@ -22,6 +22,7 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
       activeTabsItem?.value !== lastActiveTabsItemRef.current?.value ||
       editor !== lastEditorRef.current
     ) {
+      console.log("编辑器或标签页变化，强制更新");
       lastActiveTabsItemRef.current = activeTabsItem;
       lastEditorRef.current = editor;
 
@@ -84,6 +85,11 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
         const newHeadings = extractHeadings();
         setHeadings(newHeadings);
         console.log("已更新标题列表:", newHeadings);
+
+        // 强制组件重新渲染
+        setTimeout(() => {
+          setForceUpdate((prev) => prev + 1);
+        }, 0);
       }
     }
   }, [activeTabsItem, editor]);
@@ -178,6 +184,8 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
 
   // 构建树形数据
   const items = useMemo(() => {
+    console.log("重新构建树形数据，当前标题数量:", headings.length);
+
     const nodes = {
       root: {
         index: "root",
@@ -230,7 +238,7 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
     });
 
     return nodes;
-  }, [headings]);
+  }, [headings, forceUpdate]);
 
   // 监听编辑器滚动位置，高亮当前可见的标题
   useEffect(() => {
@@ -384,6 +392,7 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
       </div>
       {Object.keys(items).length > 1 ? (
         <UncontrolledTreeEnvironment
+          key={`tree-${forceUpdate}`}
           dataProvider={new StaticTreeDataProvider(items)}
           canDragAndDrop={false}
           canDropOnFolder={false}

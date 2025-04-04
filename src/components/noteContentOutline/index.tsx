@@ -14,6 +14,7 @@ export default function BasicTabs({
   setWorksList,
   setCurrentEditor,
   setCurrentTab,
+  setActiveRichTextEditor,
 }) {
   const [tabs, setTabs] = React.useState([]);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
@@ -29,6 +30,7 @@ export default function BasicTabs({
     if (tabs.length > 0 && selectedIndex >= 0 && selectedIndex < tabs.length) {
       const currentTab = tabs[selectedIndex];
       setCurrentTab(currentTab);
+      console.log("currentTab", currentTab);
       setActiveTabsItem(currentTab); // 确保更新活动标签项
     } else {
       setCurrentTab(null);
@@ -112,6 +114,7 @@ export default function BasicTabs({
                 setActiveTabsItem={setActiveTabsItem}
                 setWorksList={setWorksList}
                 setCurrentEditor={setCurrentEditor}
+                setActiveRichTextEditor={setActiveRichTextEditor}
               />
             </TabPanel>
           ))}
