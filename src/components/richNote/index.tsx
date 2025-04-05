@@ -45,7 +45,10 @@ import { CustomImage } from "./extensions/CustomImage";
 import { ImageUpdateHandler } from "./extensions/ImageUpdateHandler";
 import { CustomCodeBlock } from "./extensions/CustomCodeBlock";
 import { HeadingWithId } from "./extensions/HeadingWithId";
-
+import Table from "@tiptap/extension-table";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
+import TableRow from "@tiptap/extension-table-row";
 const lowlight = createLowlight(all);
 lowlight.register("html", html);
 lowlight.register("css", css);
@@ -101,6 +104,12 @@ const extensions = [
   // ImagePasteHandler,
   ImageUpdateHandler,
   CustomCodeBlock,
+  Table.configure({
+    resizable: true,
+  }),
+  TableRow,
+  TableHeader,
+  TableCell,
 ];
 
 export default ({

@@ -15,6 +15,7 @@ import Divider from "@mui/material/Divider";
 import HightlightComp from "@/components/richNote/subComponents/highlight";
 import { worksListDB } from "@/database/worksLists";
 import HeadingSelector from "@/components/richNote/subComponents/headingSelector";
+import TpTable from "../tpTable";
 
 const MenuBar = ({
   activeTabsItem,
@@ -136,6 +137,10 @@ const MenuBar = ({
         {textAlignTypeList.map((item, index) => {
           return <CommonBtn key={index} {...item} />;
         })}
+
+        <Divider orientation="vertical" variant="middle" flexItem />
+
+        <TpTable editor={editor} />
       </div>
       <div className="w-full my-4">
         <input
