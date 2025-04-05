@@ -15,47 +15,61 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
   const [forceUpdate, setForceUpdate] = useState(0);
   const lastActiveTabsItemRef = useRef(null);
   const lastEditorRef = useRef(null);
+  const treeKey = useRef(`tree-${Date.now()}`);
+
+  // 强制在每次标签页变化时重新创建树组件
+  useEffect(() => {
+    if (activeTabsItem?.value !== lastActiveTabsItemRef.current?.value) {
+      treeKey.current = `tree-${Date.now()}`;
+      console.log("标签页变化，更新树组件 key:", treeKey.current);
+    }
+  }, [activeTabsItem]);
 
   // 检测标签页和编辑器变化
   useEffect(() => {
-    if (
-      activeTabsItem?.value !== lastActiveTabsItemRef.current?.value ||
-      editor !== lastEditorRef.current
-    ) {
-      console.log("编辑器或标签页变化，强制更新");
+    const tabIdChanged =
+      activeTabsItem?.value !== lastActiveTabsItemRef.current?.value;
+    const editorChanged = editor !== lastEditorRef.current;
+
+    console.log("检测变化:", {
+      activeTabsItem: activeTabsItem?.value,
+      lastActiveTabsItem: lastActiveTabsItemRef.current?.value,
+      editorChanged,
+      tabIdChanged,
+    });
+
+    if (tabIdChanged || editorChanged) {
+      console.log("标签页或编辑器变化，强制更新目录");
+
+      // 更新引用
       lastActiveTabsItemRef.current = activeTabsItem;
       lastEditorRef.current = editor;
 
-      // 强制更新
-      setForceUpdate((prev) => prev + 1);
-      // 重置选中项
+      // 重置状态
       setSelectedItems([]);
       setActiveHeading(null);
-      // 重置展开项，只保留根节点
       setExpandedItems(["root"]);
 
-      console.log("切换到新的编辑器实例或标签页:", activeTabsItem?.value);
+      // 强制更新
+      setForceUpdate((prev) => prev + 1);
+      treeKey.current = `tree-${Date.now()}`;
 
-      // 立即提取当前编辑器的标题
+      // 如果编辑器存在，立即提取标题
       if (editor) {
-        const extractHeadings = () => {
+        console.log("提取当前编辑器标题");
+        setTimeout(() => {
           try {
             const headingsList = [];
             const content = editor.getJSON();
 
-            // 遍历文档内容查找标题元素
             if (content && content.content) {
               content.content.forEach((node, index) => {
-                // 同时支持 heading 和 headingWithId 类型
                 if (node.type === "heading" || node.type === "headingWithId") {
-                  // 对于普通 heading，使用索引作为 ID
                   const id =
                     (node.attrs && node.attrs.id) || `heading-${index}`;
-                  // 获取级别
                   const level = node.attrs ? node.attrs.level : 1;
                   let text = "";
 
-                  // 提取标题文本
                   if (node.content) {
                     node.content.forEach((textNode) => {
                       if (textNode.text) {
@@ -68,53 +82,49 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
                     id,
                     level,
                     text,
-                    index,
+                    index: id,
                     position: index,
                   });
                 }
               });
             }
 
-            return headingsList;
+            console.log("提取到标题:", headingsList.length);
+            setHeadings(headingsList);
+
+            // 再次强制更新
+            setTimeout(() => {
+              setForceUpdate((prev) => prev + 1);
+              treeKey.current = `tree-${Date.now()}`;
+            }, 50);
           } catch (error) {
             console.error("提取标题时出错:", error);
-            return [];
           }
-        };
-
-        const newHeadings = extractHeadings();
-        setHeadings(newHeadings);
-        console.log("已更新标题列表:", newHeadings);
-
-        // 强制组件重新渲染
-        setTimeout(() => {
-          setForceUpdate((prev) => prev + 1);
-        }, 0);
+        }, 50);
+      } else {
+        setHeadings([]);
       }
     }
   }, [activeTabsItem, editor]);
 
-  // 从编辑器内容中提取标题
+  // 监听编辑器内容变化
   useEffect(() => {
     if (!editor) return;
 
-    const extractHeadings = () => {
+    const updateHeadings = () => {
+      if (editor.isDestroyed) return;
+
       try {
         const headingsList = [];
         const content = editor.getJSON();
 
-        // 遍历文档内容查找标题元素
         if (content && content.content) {
           content.content.forEach((node, index) => {
-            // 同时支持 heading 和 headingWithId 类型
             if (node.type === "heading" || node.type === "headingWithId") {
-              // 对于普通 heading，使用索引作为 ID
               const id = (node.attrs && node.attrs.id) || `heading-${index}`;
-              // 获取级别
               const level = node.attrs ? node.attrs.level : 1;
               let text = "";
 
-              // 提取标题文本
               if (node.content) {
                 node.content.forEach((textNode) => {
                   if (textNode.text) {
@@ -127,27 +137,16 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
                 id,
                 level,
                 text,
-                index,
+                index: id,
                 position: index,
               });
             }
           });
         }
 
-        return headingsList;
+        setHeadings(headingsList);
       } catch (error) {
-        console.error("提取标题时出错:", error);
-        return [];
-      }
-    };
-
-    const updateHeadings = () => {
-      if (editor.isDestroyed) return;
-
-      // 检查当前编辑器是否与活动标签页匹配
-      if (activeTabsItem && editor) {
-        const newHeadings = extractHeadings();
-        setHeadings(newHeadings);
+        console.error("更新标题时出错:", error);
       }
     };
 
@@ -157,30 +156,17 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
     // 监听编辑器内容变化
     const updateHandler = editor.on("update", updateHeadings);
 
-    // 监听编辑器事务
-    const transactionHandler = editor.on("transaction", updateHeadings);
-
     // 监听编辑器焦点变化
     const focusHandler = editor.on("focus", () => {
-      console.log("编辑器获得焦点");
-      // 如果当前编辑器与活动标签页匹配，则更新标题
-      if (activeTabsItem && editor) {
-        updateHeadings();
-      }
+      console.log("编辑器获得焦点，更新目录");
+      updateHeadings();
     });
 
     return () => {
-      if (typeof updateHandler === "function") {
-        updateHandler();
-      }
-      if (typeof transactionHandler === "function") {
-        transactionHandler();
-      }
-      if (typeof focusHandler === "function") {
-        focusHandler();
-      }
+      if (typeof updateHandler === "function") updateHandler();
+      if (typeof focusHandler === "function") focusHandler();
     };
-  }, [editor, forceUpdate, activeTabsItem]);
+  }, [editor]);
 
   // 构建树形数据
   const items = useMemo(() => {
@@ -320,65 +306,7 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
       if (headingId === "root") return;
 
       try {
-        // 获取当前活动标签页的ID
-        const activeTabId = activeTabsItem?.value;
-
-        // 构建完整的标题ID，包含标签页ID前缀
-        const fullHeadingId = headingId;
-
-        // 直接使用标题ID查找元素
-        const targetHeading = document.getElementById(fullHeadingId);
-
-        if (targetHeading) {
-          // 找到编辑器的滚动容器
-          const scrollContainer =
-            editor.view.dom.closest(".ProseMirror-wrapper") ||
-            editor.view.dom.parentElement ||
-            document.querySelector(".tiptap-container") ||
-            document.querySelector(".EditorContent");
-
-          if (scrollContainer) {
-            // 计算元素相对于滚动容器的位置
-            const elementRect = targetHeading.getBoundingClientRect();
-            const containerRect = scrollContainer.getBoundingClientRect();
-            const relativeTop =
-              elementRect.top - containerRect.top + scrollContainer.scrollTop;
-
-            // 滚动到元素位置
-            scrollContainer.scrollTo({
-              top: relativeTop - 20, // 添加一些顶部边距
-              behavior: "smooth",
-            });
-          } else {
-            // 回退方案：直接使用元素的scrollIntoView
-            targetHeading.scrollIntoView({
-              behavior: "smooth",
-              block: "start",
-            });
-          }
-        } else {
-          console.log("未找到标题元素，尝试使用编辑器命令滚动", fullHeadingId);
-
-          // 查找文档中的所有标题节点
-          const headingNodes = [];
-          editor.state.doc.descendants((node, pos) => {
-            // 同时支持 heading 和 headingWithId 类型
-            if (
-              (node.type.name === "heading" ||
-                node.type.name === "headingWithId") &&
-              node.attrs.id === headingId
-            ) {
-              headingNodes.push({ node, pos });
-            }
-          });
-
-          if (headingNodes.length > 0) {
-            // 使用编辑器的命令滚动到该位置
-            editor.commands.scrollIntoView(headingNodes[0].pos, 0);
-          } else {
-            console.warn("未找到匹配的标题节点:", headingId);
-          }
-        }
+        // 不阻止默认行为，让浏览器处理锚点跳转
       } catch (error) {
         console.error("滚动到标题时出错:", error);
       }
@@ -392,7 +320,7 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
       </div>
       {Object.keys(items).length > 1 ? (
         <UncontrolledTreeEnvironment
-          key={`tree-${forceUpdate}`}
+          key={treeKey.current}
           dataProvider={new StaticTreeDataProvider(items)}
           canDragAndDrop={false}
           canDropOnFolder={false}
@@ -420,7 +348,7 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
               href={item.index !== "root" ? `#${item.index}` : "#"}
               className={`outline-item level-${item.level || 0} ${
                 selectedItems.includes(item.index) ? "active" : ""
-              }`}
+              } w-full h-full content-center`}
               onClick={(e) => {
                 // 不阻止默认行为，让浏览器处理锚点跳转
                 if (item.index === "root") {

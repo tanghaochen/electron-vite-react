@@ -19,13 +19,11 @@
 
     .outline-item {
       display: block;
-      padding: 4px 8px;
       border-radius: 4px;
 
       &.active {
-        background-color: #e6f7ff;
-        color: #1890ff;
         font-weight: 500;
+        font-weight: bold;
       }
 
       &.level-1 {

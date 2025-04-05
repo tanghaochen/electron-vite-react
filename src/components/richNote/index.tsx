@@ -4,7 +4,7 @@ import ListItem from "@tiptap/extension-list-item";
 import TextStyle from "@tiptap/extension-text-style";
 import { EditorProvider, useCurrentEditor, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Button from "@mui/material/Button";
 import "material-symbols";
 import MenuItem from "@mui/material/MenuItem";
@@ -111,8 +111,12 @@ export default ({
   setWorksList,
   setCurrentEditor,
   setActiveRichTextEditor,
+  registerEditor,
 }) => {
   const [richTextTitleInputValue, setRichTextTitleInputValue] = useState("");
+  const lastActiveTabsItemRef = useRef(null);
+  const [forceUpdateKey, setForceUpdateKey] = useState(Date.now());
+
   const editor = useEditor({
     extensions,
     content: tabItem.content,
@@ -132,6 +136,12 @@ export default ({
   useEffect(() => {
     if (editor) {
       setCurrentEditor(editor);
+
+      // 注册编辑器实例
+      if (registerEditor && tabItem.value) {
+        console.log("注册编辑器实例:", tabItem.value);
+        registerEditor(tabItem.value, editor);
+      }
     }
 
     return () => {
@@ -139,7 +149,50 @@ export default ({
         setCurrentEditor(null);
       }
     };
-  }, [editor, setCurrentEditor]);
+  }, [editor, setCurrentEditor, registerEditor, tabItem]);
+
+  // 监听标签页变化
+  useEffect(() => {
+    const tabIdChanged =
+      activeTabsItem?.value !== lastActiveTabsItemRef.current?.value;
+
+    if (tabIdChanged) {
+      console.log("activeTabsItem ID 变化:", activeTabsItem?.value);
+      console.log(
+        "上一个 activeTabsItem ID:",
+        lastActiveTabsItemRef.current?.value,
+      );
+
+      // 更新引用
+      lastActiveTabsItemRef.current = activeTabsItem;
+
+      // 设置当前编辑器为活动编辑器
+      if (editor && activeTabsItem?.value === tabItem.value) {
+        console.log("设置当前编辑器为活动编辑器:", tabItem.value);
+        setActiveRichTextEditor(editor);
+
+        // 强制更新
+        setForceUpdateKey(Date.now());
+
+        // 自动聚焦编辑器
+        setTimeout(() => {
+          editor.commands.focus();
+        }, 100);
+      }
+    }
+  }, [activeTabsItem, tabItem, editor, setActiveRichTextEditor]);
+
+  // 监听标签页变化，自动聚焦当前编辑器
+  useEffect(() => {
+    // 检查当前标签页是否是活动标签页
+    if (editor && activeTabsItem && tabItem.value === activeTabsItem.value) {
+      console.log("自动聚焦编辑器:", tabItem.value);
+      // 使用setTimeout确保DOM已经完全渲染
+      setTimeout(() => {
+        editor.commands.focus();
+      }, 100);
+    }
+  }, [editor, activeTabsItem, tabItem]);
 
   const handleTPBlur = (e) => {
     // 获取改变的内容
@@ -155,6 +208,7 @@ export default ({
 
   return (
     <EditorProvider
+      key={`editor-${tabItem.value}-${forceUpdateKey}`}
       slotBefore={
         <ContentMenu
           activeTabsItem={activeTabsItem}
