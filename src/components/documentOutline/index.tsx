@@ -16,14 +16,7 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
   const lastActiveTabsItemRef = useRef(null);
   const lastEditorRef = useRef(null);
   const treeKey = useRef(`tree-${Date.now()}`);
-
-  // 强制在每次标签页变化时重新创建树组件
-  useEffect(() => {
-    if (activeTabsItem?.value !== lastActiveTabsItemRef.current?.value) {
-      treeKey.current = `tree-${Date.now()}`;
-      console.log("标签页变化，更新树组件 key:", treeKey.current);
-    }
-  }, [activeTabsItem]);
+  const observerRef = useRef(null);
 
   // 检测标签页和编辑器变化
   useEffect(() => {
@@ -96,6 +89,9 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
             setTimeout(() => {
               setForceUpdate((prev) => prev + 1);
               treeKey.current = `tree-${Date.now()}`;
+
+              // 设置 IntersectionObserver
+              setupIntersectionObserver();
             }, 50);
           } catch (error) {
             console.error("提取标题时出错:", error);
@@ -145,6 +141,11 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
         }
 
         setHeadings(headingsList);
+
+        // 更新后重新设置 IntersectionObserver
+        setTimeout(() => {
+          setupIntersectionObserver();
+        }, 50);
       } catch (error) {
         console.error("更新标题时出错:", error);
       }
@@ -165,8 +166,104 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
     return () => {
       if (typeof updateHandler === "function") updateHandler();
       if (typeof focusHandler === "function") focusHandler();
+
+      // 清理 IntersectionObserver
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
     };
   }, [editor]);
+
+  // 设置 IntersectionObserver
+  const setupIntersectionObserver = () => {
+    // 清理旧的观察者
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    // 创建新的观察者
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // 找到第一个可见的标题
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const id =
+              entry.target.id || entry.target.getAttribute("data-heading-id");
+            if (id && id !== activeHeading) {
+              // 延迟设置选中项，确保树组件已经重新创建
+              // setTimeout(() => {
+              console.log("id>>", id);
+              // setSelectedItems([id]);
+              setTimeout(() => {
+                setSelectedItems([id]);
+              }, 0);
+              // // 确保高亮的项目在展开状态
+              // ensureItemExpanded(id);
+              // // }, 10);
+              // setActiveHeading(id);
+              // // 确保高亮的项目在展开状态
+              // ensureItemExpanded(id);
+              break;
+            }
+          }
+        }
+      },
+      {
+        root:
+          document.querySelector(".ProseMirror-wrapper") ||
+          document.querySelector(".tiptap-container"),
+        threshold: [0, 0.25, 0.5, 0.75, 1], // 提高灵敏度
+        rootMargin: "-10% 0px -10% 0px", // 根据需要调整，负值缩小视口
+      },
+    );
+
+    // 存储观察者引用
+    observerRef.current = observer;
+
+    // 获取所有标题元素
+    setTimeout(() => {
+      const headingElements = document.querySelectorAll(
+        ".ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6, .ProseMirror [role='heading']",
+      );
+
+      console.log("找到标题元素:", headingElements.length);
+
+      // 观察所有标题元素
+      headingElements.forEach((element) => {
+        observer.observe(element);
+      });
+    }, 100);
+  };
+
+  // 确保高亮的项目在展开状态
+  const ensureItemExpanded = (itemId) => {
+    // 找到该标题的所有父节点
+    const parentIds = [];
+    let currentNode = itemId;
+
+    // 遍历树结构找到所有父节点
+    for (const nodeId in items) {
+      if (
+        items[nodeId].children &&
+        items[nodeId].children.includes(currentNode)
+      ) {
+        parentIds.push(nodeId);
+        currentNode = nodeId;
+        if (nodeId === "root") break;
+      }
+    }
+
+    // 展开所有父节点
+    if (parentIds.length > 0) {
+      const newExpandedItems = [...expandedItems];
+      parentIds.forEach((id) => {
+        if (!newExpandedItems.includes(id)) {
+          newExpandedItems.push(id);
+        }
+      });
+      setExpandedItems(newExpandedItems);
+    }
+  };
 
   // 构建树形数据
   const items = useMemo(() => {
@@ -226,157 +323,82 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
     return nodes;
   }, [headings, forceUpdate]);
 
-  // 监听编辑器滚动位置，高亮当前可见的标题
-  useEffect(() => {
-    if (!editor) return;
-
-    const handleScroll = () => {
-      try {
-        // 获取当前活动标签页的ID
-        const activeTabId = activeTabsItem?.value;
-
-        // 找到所有标题元素
-        const headingElements = document.querySelectorAll(
-          ".ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6",
-        );
-
-        if (headingElements.length === 0) return;
-
-        // 找到当前可见的标题
-        let currentHeading = null;
-        const editorElement =
-          editor.view.dom.closest(".ProseMirror-wrapper") ||
-          editor.view.dom.parentElement ||
-          document.querySelector(".tiptap-container");
-
-        if (!editorElement) return;
-
-        const scrollTop = editorElement.scrollTop;
-        const viewportHeight = editorElement.clientHeight;
-        const editorRect = editorElement.getBoundingClientRect();
-
-        for (let i = 0; i < headingElements.length; i++) {
-          const element = headingElements[i];
-          const rect = element.getBoundingClientRect();
-          const elementTop = rect.top - editorRect.top;
-
-          if (elementTop <= 100) {
-            // 标题在视口顶部或接近顶部
-            currentHeading = element.id;
-          } else {
-            break; // 找到第一个不在视口内的标题就停止
-          }
-        }
-
-        if (currentHeading !== activeHeading) {
-          setActiveHeading(currentHeading);
-          if (currentHeading) {
-            setSelectedItems([currentHeading]);
-          }
-        }
-      } catch (error) {
-        console.error("处理滚动时出错:", error);
-      }
-    };
-
-    // 找到正确的滚动容器
-    const editorElement =
-      editor.view.dom.closest(".ProseMirror-wrapper") ||
-      editor.view.dom.parentElement ||
-      document.querySelector(".tiptap-container");
-
-    if (editorElement) {
-      editorElement.addEventListener("scroll", handleScroll);
-
-      // 初始触发一次滚动处理，确保初始状态正确
-      setTimeout(handleScroll, 300);
-
-      return () => {
-        editorElement.removeEventListener("scroll", handleScroll);
-      };
-    }
-  }, [editor, activeHeading, forceUpdate, activeTabsItem]);
-
   // 点击目录项滚动到对应位置
   const handleSelectItems = (items) => {
     setSelectedItems(items);
-
-    if (items.length > 0 && editor) {
-      const headingId = items[0];
-      if (headingId === "root") return;
-
-      try {
-        // 不阻止默认行为，让浏览器处理锚点跳转
-      } catch (error) {
-        console.error("滚动到标题时出错:", error);
-      }
-    }
   };
 
   return (
-    <div className="document-outline">
-      <div className="outline-header">
-        <h3 className="text-zinc-800 font-bold p-4">文档目录</h3>
-      </div>
-      {Object.keys(items).length > 1 ? (
-        <UncontrolledTreeEnvironment
-          key={treeKey.current}
-          dataProvider={new StaticTreeDataProvider(items)}
-          canDragAndDrop={false}
-          canDropOnFolder={false}
-          canReorderItems={false}
-          getItemTitle={(item) => item.label}
-          viewState={{
-            ["outline"]: {
-              expandedItems,
-              selectedItems,
-            },
-          }}
-          onExpandItem={(item) =>
-            setExpandedItems([...expandedItems, item.index])
-          }
-          onCollapseItem={(item) =>
-            setExpandedItems(
-              expandedItems.filter(
-                (expandedItemIndex) => expandedItemIndex !== item.index,
-              ),
-            )
-          }
-          onSelectItems={handleSelectItems}
-          renderItemTitle={({ item }) => (
-            <a
-              href={item.index !== "root" ? `#${item.index}` : "#"}
-              className={`outline-item level-${item.level || 0} ${
-                selectedItems.includes(item.index) ? "active" : ""
-              } w-full h-full content-center`}
-              onClick={(e) => {
-                // 不阻止默认行为，让浏览器处理锚点跳转
-                if (item.index === "root") {
-                  e.preventDefault(); // 只有根节点阻止默认行为
-                } else {
-                  // 更新选中状态
-                  setSelectedItems([item.index]);
-                }
-              }}
-              style={{
-                textDecoration: "none", // 移除下划线
-                color: "inherit", // 使用继承的颜色
-                display: "block", // 块级显示
-                padding: "4px 8px", // 添加内边距
-                cursor: "pointer", // 鼠标指针
-              }}
-            >
-              {item.label}
-            </a>
-          )}
-        >
-          <Tree treeId="outline" rootItem="root" treeLabel="文档目录" />
-        </UncontrolledTreeEnvironment>
-      ) : (
-        <div className="empty-outline">
-          <p className="text-zinc-500 text-center p-4">没有可用的目录</p>
+    <>
+      <div className="document-outline">
+        <div className="outline-header">
+          <h3 className="text-zinc-800 font-bold p-4">文档目录</h3>
         </div>
-      )}
-    </div>
+        {Object.keys(items).length > 1 ? (
+          <UncontrolledTreeEnvironment
+            key={treeKey.current}
+            dataProvider={new StaticTreeDataProvider(items)}
+            canDragAndDrop={false}
+            canDropOnFolder={false}
+            canReorderItems={false}
+            disableMultiselect
+            getItemTitle={(item) => item.label}
+            viewState={{
+              ["outline"]: {
+                expandedItems,
+                selectedItems,
+              },
+            }}
+            onExpandItem={(item) =>
+              setExpandedItems([...expandedItems, item.index])
+            }
+            onCollapseItem={(item) =>
+              setExpandedItems(
+                expandedItems.filter(
+                  (expandedItemIndex) => expandedItemIndex !== item.index,
+                ),
+              )
+            }
+            onSelectItems={handleSelectItems}
+            renderItemTitle={({ item }) => (
+              <a
+                href={item.index !== "root" ? `#${item.index}` : "#"}
+                className={`outline-item level-${item.level || 0} ${
+                  selectedItems.includes(item.index) ? "active" : ""
+                }`}
+                onClick={(e) => {
+                  // 不阻止默认行为，让浏览器处理锚点跳转
+                  if (item.index === "root") {
+                    e.preventDefault(); // 只有根节点阻止默认行为
+                  } else {
+                    // 更新选中状态
+                    setSelectedItems([item.index]);
+                    setActiveHeading(item.index);
+                  }
+                }}
+                style={{
+                  textDecoration: "none", // 移除下划线
+                  fontWeight: selectedItems.includes(item.index)
+                    ? "bold"
+                    : "normal", // 高亮加粗
+                  display: "block", // 块级显示
+                  padding: "4px 8px", // 添加内边距
+                  cursor: "pointer", // 鼠标指针
+                  borderRadius: "4px", // 圆角
+                }}
+              >
+                {item.label}
+              </a>
+            )}
+          >
+            <Tree treeId="outline" rootItem="root" treeLabel="文档目录" />
+          </UncontrolledTreeEnvironment>
+        ) : (
+          <div className="empty-outline">
+            <p className="text-zinc-500 text-center p-4">没有可用的目录</p>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

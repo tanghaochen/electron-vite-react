@@ -11,7 +11,7 @@ import ContextMenu from "@/components/noteOutlineTagTree/contextMenu";
 import * as React from "react";
 import { nanoid } from "nanoid";
 import contextMenuEvents from "@/components/complexTree/libs/contextMenuEvents";
-import './styles/index.scss'
+import "./styles/index.scss";
 import AddIcon from "@mui/icons-material/Add";
 import Button from "@mui/material/Button";
 export default function complexTree({ onSelectedTagChange }) {
@@ -26,7 +26,7 @@ export default function complexTree({ onSelectedTagChange }) {
   });
   const [focusedItem, setFocusedItem] = useState();
   const [expandedItems, setExpandedItems] = useState([]);
-  // 
+  //
   const [selectedItems, setSelectedItems] = useState([]);
   // 右键菜单
   const [contextMenu, setContextMenu] = React.useState<{
@@ -93,7 +93,7 @@ export default function complexTree({ onSelectedTagChange }) {
       // 新增item的id
       newItemID = null;
       // 拖拽之后的id list
-      dropList = []
+      dropList = [];
 
       getTreeItem = async (itemId) => {
         const item = this.data[itemId];
@@ -113,9 +113,9 @@ export default function complexTree({ onSelectedTagChange }) {
 
       // 主要用于拖拽后的数据变化监听
       async onChangeItemChildren(itemId, newChildren) {
-        console.log('itemId, newChildren', itemId, newChildren)
+        console.log("itemId, newChildren", itemId, newChildren);
         this.data[itemId].children = newChildren;
-        this.dropList = newChildren
+        this.dropList = newChildren;
         this.emitChange([itemId]);
       }
 
@@ -155,10 +155,12 @@ export default function complexTree({ onSelectedTagChange }) {
         delete this.data[itemId];
         this.emitChange([parent.index]);
         tagsdb.deleteTag(itemId);
+        // TODO 删除所有被删除标签笔记
       };
       // 新增item, parentItemId=0表示根节点
-      injectItem = async (parentItemId=0, label = "未命名") => {
-        const parentIdInTree = parentItemId === 0 ? "root" : String(parentItemId);
+      injectItem = async (parentItemId = 0, label = "未命名") => {
+        const parentIdInTree =
+          parentItemId === 0 ? "root" : String(parentItemId);
 
         // 展开父节点
         if (tree.current) {
@@ -239,20 +241,29 @@ export default function complexTree({ onSelectedTagChange }) {
      * @item 选中的被拖拽的元素
      * @target drop拖拽结束的元素
      */
-    console.log("拖拽结束:", items, "目标:", target,'的',target.linePosition,target.parentItem);
-    const dropItemID = target.parentItem === "root" ? "0" : target.parentItem||0;
+    console.log(
+      "拖拽结束:",
+      items,
+      "目标:",
+      target,
+      "的",
+      target.linePosition,
+      target.parentItem,
+    );
+    const dropItemID =
+      target.parentItem === "root" ? "0" : target.parentItem || 0;
     items.forEach((item) => {
       tagsdb.updateTag(item.index, {
         parent_id: dropItemID,
       });
     });
 
-    dataProvider.dropList.forEach((item,index)=>{
-      console.log('item', item,index)
-        tagsdb.updateTag(item, {
-            sort_order: index,
-        });
-    })
+    dataProvider.dropList.forEach((item, index) => {
+      console.log("item", item, index);
+      tagsdb.updateTag(item, {
+        sort_order: index,
+      });
+    });
   };
 
   const handleContextMenu = (event, item) => {
@@ -266,10 +277,10 @@ export default function complexTree({ onSelectedTagChange }) {
       targetItem: item.item.index, // store the item's ID (or the whole item if needed)
     });
   };
-  
+
   const handleAddTagsItem = (e) => {
     dataProvider.injectItem();
-  }
+  };
   // Custom renderItem to integrate onContextMenu
   const renderItem = ({ item, title, context, arrow, children }) => {
     const InteractiveComponent = "div";
@@ -289,19 +300,19 @@ export default function complexTree({ onSelectedTagChange }) {
   };
   return (
     <div className="w-full h-full bg-stone-50">
-      <div className='content-center flex gap-2 py-2 text-zinc-500 justify-between px-2'>
-      <div className="font-bold p-2 w-full">分类标签</div>
+      <div className="content-center flex gap-2 py-2 text-zinc-500 justify-between px-2">
+        <div className="font-bold p-2 w-full">分类标签</div>
         <Button
-            color="#000000"
-            size="small"
-            style={{
-              backgroundColor: 'white',
-              border: '1px solid #E0E0E0',
-            }}
-            className='size-8 my-auto'
-            onClick={handleAddTagsItem}
+          color="#000000"
+          size="small"
+          style={{
+            backgroundColor: "white",
+            border: "1px solid #E0E0E0",
+          }}
+          className="size-8 my-auto"
+          onClick={handleAddTagsItem}
         >
-          <AddIcon fontSize="small"/>
+          <AddIcon fontSize="small" />
         </Button>
       </div>
       <UncontrolledTreeEnvironment
@@ -311,6 +322,7 @@ export default function complexTree({ onSelectedTagChange }) {
         canReorderItems
         canDropOnNonFolder // 建议false，防止非文件夹意外接收子节点
         canDropBelowOpenFolders
+        disableMultiselect
         getItemTitle={(item) => item.label} // 指定lable
         dataProvider={dataProvider}
         viewState={{
@@ -340,7 +352,9 @@ export default function complexTree({ onSelectedTagChange }) {
           )
         }
         onRenameItem={(item, name) => dataProvider.renameItem(item, name)}
-        onSelectItems={(items) => setSelectedItems(items)}
+        onSelectItems={(items) => {
+          setSelectedItems(items);
+        }}
         // 重命名回调
         // 展开箭头
         // renderItemArrow={({ item, context }) =>

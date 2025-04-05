@@ -1,9 +1,19 @@
+:root {
+  // 变量 - 修复变量设置方式
+  --rct-color-focustree-item-selected-bg: none;
+  --rct-bar-color: transparent;
+}
+.rct-tree-item-title-container-selected .rct-tree-item-button {
+  background-color: transparent;
+}
+.rct-tree-item-title-container-selected .rct-tree-item-button::before {
+  background-color: transparent;
+}
 .document-outline {
   height: 100%;
   display: flex;
   flex-direction: column;
   background-color: #f8f8f8;
-
   .outline-header {
     border-bottom: 1px solid #e0e0e0;
   }
@@ -18,11 +28,13 @@
     }
 
     .outline-item {
+      @apply w-full h-full content-center;
       display: block;
       border-radius: 4px;
+      color: inherit;
+      font-size: 1rem;
 
       &.active {
-        font-weight: 500;
         font-weight: bold;
       }
 
