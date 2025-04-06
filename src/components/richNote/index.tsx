@@ -49,12 +49,7 @@ import Table from "@tiptap/extension-table";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import TableRow from "@tiptap/extension-table-row";
-const lowlight = createLowlight(all);
-lowlight.register("html", html);
-lowlight.register("css", css);
-lowlight.register("js", js);
-lowlight.register("ts", ts);
-//
+
 const extensions = [
   StarterKit.configure({
     italic: false,
@@ -92,9 +87,9 @@ const extensions = [
   Placeholder.configure({
     placeholder: "开始编辑词条内容 …",
   }),
-  CodeBlockLowlight.configure({
-    lowlight,
-  }),
+  // CodeBlockLowlight.configure({
+  //   lowlight,
+  // }),
   TextAlign.configure({
     types: ["heading", "paragraph"],
   }),
@@ -138,6 +133,13 @@ export default ({
     onFocus: ({ editor }) => {
       console.log("onFocus");
       setActiveRichTextEditor(editor);
+    },
+    editorProps: {
+      attributes: {
+        spellcheck: "false", // 关闭拼写检查
+        autocorrect: "off", // 关闭自动更正
+        autocapitalize: "off", // 关闭自动大写
+      },
     },
   });
 
@@ -232,6 +234,15 @@ export default ({
       content={tabItem.content}
       onBlur={handleTPBlur}
       onFocus={handleTPFocus}
+      editorProps={{
+        attributes: {
+          spellcheck: "false", // 关闭拼写检查
+          autocorrect: "off", // 关闭自动更正
+          autocapitalize: "off", // 关闭自动大写
+          class:
+            "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none",
+        },
+      }}
     ></EditorProvider>
   );
 };

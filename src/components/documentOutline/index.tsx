@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Tree,
   UncontrolledTreeEnvironment,
@@ -119,8 +119,6 @@ class DocumentOutlineDataProvider implements TreeDataProvider {
 
   // 更新标题数据
   public updateHeadings(headings) {
-    console.log("更新标题数据:", headings);
-
     if (headings.length === 0) {
       // 如果没有标题，重置为只有根节点的树
       this.data = {
@@ -241,7 +239,6 @@ class DocumentOutlineDataProvider implements TreeDataProvider {
       }
     });
 
-    console.log("树数据更新完成:", this.data);
     // 通知所有监听器数据已更新
     this.treeChangeListeners.forEach((listener) => listener(["root"]));
   }
@@ -262,14 +259,13 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
   const observerRef = useRef(null);
   const dataProviderRef = useRef(new DocumentOutlineDataProvider());
 
-  // 提取标题的函数，在组件顶层定义，这样所有 useEffect 都可以访问
+  // 提取标题的函数
   const updateHeadings = () => {
     if (!editor || editor.isDestroyed) return;
 
     try {
       const headingsList = [];
       const content = editor.getJSON();
-      console.log("提取标题中...", content);
 
       if (content && content.content) {
         content.content.forEach((node, index) => {
@@ -296,12 +292,10 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
         });
       }
 
-      console.log("提取到标题:", headingsList.length);
       setHeadings(headingsList);
 
       // 更新数据提供者
       dataProviderRef.current.updateHeadings(headingsList);
-      console.log("数据提供者更新后:", dataProviderRef.current.getData());
 
       // 更新后重新设置 IntersectionObserver
       setTimeout(() => {
@@ -314,14 +308,11 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
 
   // 检测标签页和编辑器变化
   useEffect(() => {
-    console.log("标签页或编辑器变化检测", { activeTabsItem, editor });
     const tabIdChanged =
       activeTabsItem?.value !== lastActiveTabsItemRef.current?.value;
     const editorChanged = editor !== lastEditorRef.current;
 
     if (tabIdChanged || editorChanged) {
-      console.log("标签页或编辑器已变化", { tabIdChanged, editorChanged });
-
       // 更新引用
       lastActiveTabsItemRef.current = activeTabsItem;
       lastEditorRef.current = editor;
@@ -331,42 +322,28 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
       setActiveHeading(null);
       setExpandedItems(["root"]);
 
-      // 如果编辑器存在，立即提取标题
-      if (editor) {
-        console.log("编辑器存在，立即提取标题");
-        updateHeadings();
-      } else {
-        console.log("编辑器不存在，清空标题");
-        setHeadings([]);
-        dataProviderRef.current.updateHeadings([]);
-      }
+      // 更新标题
+      updateHeadings();
     }
   }, [activeTabsItem, editor]);
 
-  // 监听编辑器内容变化
+  // 监听编辑器变化
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed) return;
 
-    // 初始提取标题
+    // 监听编辑器变化
+    const onUpdate = () => {
+      updateHeadings();
+    };
+
+    editor.on("update", onUpdate);
+
+    // 初始化
     updateHeadings();
 
-    // 监听编辑器内容变化
-    const updateHandler = editor.on("update", () => {
-      console.log("编辑器内容已更新，更新目录");
-      updateHeadings();
-    });
-
-    // 监听编辑器焦点变化
-    const focusHandler = editor.on("focus", () => {
-      console.log("编辑器获得焦点，更新目录");
-      updateHeadings();
-    });
-
     return () => {
-      if (typeof updateHandler === "function") updateHandler();
-      if (typeof focusHandler === "function") focusHandler();
-
-      // 清理 IntersectionObserver
+      // 清理
+      editor.off("update", onUpdate);
       if (observerRef.current) {
         observerRef.current.disconnect();
       }
@@ -389,7 +366,6 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
             const id =
               entry.target.id || entry.target.getAttribute("data-heading-id");
             if (id && id !== activeHeading) {
-              console.log("可见标题:", id);
               setTimeout(() => {
                 setSelectedItems([id]);
               }, 0);
@@ -402,8 +378,8 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
         root:
           document.querySelector(".ProseMirror-wrapper") ||
           document.querySelector(".tiptap-container"),
-        threshold: [0, 0.25, 0.5, 0.75, 1], // 提高灵敏度
-        rootMargin: "-10% 0px -10% 0px", // 根据需要调整，负值缩小视口
+        threshold: [0, 0.25, 0.5, 0.75, 1],
+        rootMargin: "-10% 0px -10% 0px",
       },
     );
 
@@ -415,8 +391,6 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
       const headingElements = document.querySelectorAll(
         ".ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6, .ProseMirror [role='heading']",
       );
-
-      console.log("找到标题元素:", headingElements.length);
 
       // 观察所有标题元素
       headingElements.forEach((element) => {
@@ -469,8 +443,6 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
     }
   };
 
-  console.log("渲染文档大纲组件, 标题数:", headings.length);
-
   return (
     <div className="document-outline">
       <div className="outline-header">
@@ -518,14 +490,14 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
                 }
               }}
               style={{
-                textDecoration: "none", // 移除下划线
+                textDecoration: "none",
                 fontWeight: selectedItems.includes(item.index)
                   ? "bold"
-                  : "normal", // 高亮加粗
-                display: "block", // 块级显示
-                padding: "4px 8px", // 添加内边距
-                cursor: "pointer", // 鼠标指针
-                borderRadius: "4px", // 圆角
+                  : "normal",
+                display: "block",
+                padding: "4px 8px",
+                cursor: "pointer",
+                borderRadius: "4px",
               }}
             >
               {item.label}
