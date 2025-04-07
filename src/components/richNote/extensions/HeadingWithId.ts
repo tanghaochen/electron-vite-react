@@ -85,7 +85,7 @@ export const HeadingWithId = Node.create<HeadingOptions>({
   renderHTML({ node, HTMLAttributes }) {
     const hasLevel = this.options.levels.includes(node.attrs.level);
     const level = hasLevel ? node.attrs.level : this.options.levels[0];
-
+    HTMLAttributes.id = nanoid(8);
     return [
       `h${level}`,
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
@@ -103,9 +103,7 @@ export const HeadingWithId = Node.create<HeadingOptions>({
           }
 
           // 如果没有提供ID，生成一个新的
-          if (!attributes.id) {
-            attributes.id = nanoid(8);
-          }
+          attributes.id = nanoid(8);
 
           return commands.setNode(this.name, attributes);
         },
@@ -117,9 +115,7 @@ export const HeadingWithId = Node.create<HeadingOptions>({
           }
 
           // 如果没有提供ID，生成一个新的
-          if (!attributes.id) {
-            attributes.id = nanoid(8);
-          }
+          attributes.id = nanoid(8);
 
           return commands.toggleNode(this.name, "paragraph", attributes);
         },

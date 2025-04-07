@@ -58,6 +58,7 @@ class DocumentOutlineDataProvider implements TreeDataProvider {
   }
 
   public async onRenameItem(item: TreeItem, name: string): Promise<void> {
+    console.log("onRenameItem", this.data);
     this.data[item.index].label = name;
     this.treeChangeListeners.forEach((listener) => listener([item.index]));
   }
@@ -132,7 +133,7 @@ class DocumentOutlineDataProvider implements TreeDataProvider {
       this.treeChangeListeners.forEach((listener) => listener(["root"]));
       return;
     }
-
+    console.log("this.data", this.data);
     // 获取当前存在的标题ID
     const existingIds = new Set(Object.keys(this.data));
     existingIds.delete("root"); // 排除根节点
@@ -201,7 +202,7 @@ class DocumentOutlineDataProvider implements TreeDataProvider {
           level,
           position: heading.position,
           children: [],
-          isFolder: false,
+          isFolder: true,
         };
       } else {
         // 更新现有节点
@@ -247,6 +248,21 @@ class DocumentOutlineDataProvider implements TreeDataProvider {
   public getData() {
     return this.data;
   }
+
+  // 清除数据
+  public clearData() {
+    this.data = {
+      root: {
+        index: "root",
+        isFolder: true,
+        children: [],
+        label: "目录",
+      },
+    };
+    // this.data.root.children = [];
+    console.log("clearData", this.data);
+    this.treeChangeListeners.forEach((listener) => listener(["root"]));
+  }
 }
 
 export default function DocumentOutline({ editor, activeTabsItem }) {
@@ -258,7 +274,7 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
   const lastEditorRef = useRef(null);
   const observerRef = useRef(null);
   const dataProviderRef = useRef(new DocumentOutlineDataProvider());
-
+  let index = 1;
   // 提取标题的函数
   const updateHeadings = () => {
     if (!editor || editor.isDestroyed) return;
@@ -268,9 +284,16 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
       const content = editor.getJSON();
 
       if (content && content.content) {
+        // 查找文档中实际存在的标题元素
+        const headingElements = document.querySelectorAll(
+          ".ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6, .ProseMirror [role='heading']",
+        );
+
+        // 创建DOM元素到位置的映射
+        const elementPositionMap = new Map();
+
         content.content.forEach((node, index) => {
           if (node.type === "heading" || node.type === "headingWithId") {
-            const id = (node.attrs && node.attrs.id) || `heading-${index}`;
             const level = node.attrs ? node.attrs.level : 1;
             let text = "";
 
@@ -282,16 +305,30 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
               });
             }
 
-            headingsList.push({
-              id,
-              level,
-              text,
-              position: index,
-            });
+            elementPositionMap.set(text.trim(), index);
           }
+        });
+
+        // 从DOM中获取实际ID
+        headingElements.forEach((element, idx) => {
+          const text = element.textContent.trim();
+          const level = parseInt(element.tagName.substring(1)) || 1;
+          const id =
+            element.id ||
+            element.getAttribute("data-heading-id") ||
+            `heading-${idx}`;
+          const position = elementPositionMap.get(text) || idx;
+
+          headingsList.push({
+            id,
+            level,
+            text,
+            position,
+          });
         });
       }
 
+      console.log("headingsList", headingsList);
       setHeadings(headingsList);
 
       // 更新数据提供者
@@ -310,6 +347,11 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
   useEffect(() => {
     const tabIdChanged =
       activeTabsItem?.value !== lastActiveTabsItemRef.current?.value;
+    if (tabIdChanged) {
+      // dataProviderRef.current.clearData();
+      dataProviderRef.current.updateHeadings([]);
+    }
+
     const editorChanged = editor !== lastEditorRef.current;
 
     if (tabIdChanged || editorChanged) {
@@ -321,7 +363,7 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
       setSelectedItems([]);
       setActiveHeading(null);
       setExpandedItems(["root"]);
-
+      console.log("检测标签页和编辑器变化");
       // 更新标题
       updateHeadings();
     }
@@ -333,6 +375,7 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
 
     // 监听编辑器变化
     const onUpdate = () => {
+      console.log("onUpdate");
       updateHeadings();
     };
 
@@ -368,6 +411,8 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
             if (id && id !== activeHeading) {
               setTimeout(() => {
                 setSelectedItems([id]);
+                setActiveHeading(id);
+                ensureItemExpanded(id);
               }, 0);
               break;
             }
@@ -480,6 +525,7 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
                 selectedItems.includes(item.index) ? "active" : ""
               }`}
               onClick={(e) => {
+                console.log("item", item);
                 // 不阻止默认行为，让浏览器处理锚点跳转
                 if (item.index === "root") {
                   e.preventDefault(); // 只有根节点阻止默认行为
