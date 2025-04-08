@@ -36,12 +36,12 @@ import Text from "@tiptap/extension-text";
 import Typography from "@tiptap/extension-typography";
 import TextAlign from "@tiptap/extension-text-align";
 import Italic from "@tiptap/extension-italic";
-import ContentMenu from "./subComponents/contentMenu";
+import ContentMenu from "./subComponents/contentMenu/index";
 import Placeholder from "@tiptap/extension-placeholder";
 import { noteContentDB } from "@/database/noteContentDB";
 import "./styles.scss";
 import { ImagePasteHandler } from "./extensions/ImagePasteHandler";
-import { CustomImage } from "./extensions/CustomImage";
+import { CustomImage } from "./extensions/CustomImage.ts";
 import { ImageUpdateHandler } from "./extensions/ImageUpdateHandler";
 import { CustomCodeBlock } from "./extensions/CustomCodeBlock";
 import { HeadingWithId } from "./extensions/HeadingWithId";
@@ -49,7 +49,7 @@ import Table from "@tiptap/extension-table";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import TableRow from "@tiptap/extension-table-row";
-
+import "./styles/index.scss";
 const extensions = [
   StarterKit.configure({
     italic: false,
@@ -57,19 +57,18 @@ const extensions = [
     listItem: false,
     codeBlock: false,
     text: false,
-    image: true,
+    image: false,
     heading: false,
   }),
   HeadingWithId,
   Color.configure({ types: [TextStyle.name, ListItem.name] }),
   TextStyle.configure({ types: [ListItem.name] }),
   Highlight.configure({ multicolor: true }),
-  // CustomImage,
-  Image.configure({
-    HTMLAttributes: {
-      class: "my-custom-class",
-    },
+  CustomImage.configure({
     inline: true,
+    HTMLAttributes: {
+      class: "custom-image",
+    },
     allowBase64: true,
   }),
   Italic,
@@ -87,16 +86,12 @@ const extensions = [
   Placeholder.configure({
     placeholder: "开始编辑词条内容 …",
   }),
-  // CodeBlockLowlight.configure({
-  //   lowlight,
-  // }),
   TextAlign.configure({
     types: ["heading", "paragraph"],
   }),
   TaskList,
   Text,
   TaskItem.configure({}),
-  // ImagePasteHandler,
   ImageUpdateHandler,
   CustomCodeBlock,
   Table.configure({

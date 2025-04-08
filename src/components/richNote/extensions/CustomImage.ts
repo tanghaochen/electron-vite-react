@@ -1,6 +1,16 @@
 import Image from "@tiptap/extension-image";
+import { ReactNodeViewRenderer } from "@tiptap/react";
+import ImageView from "./CustomImageView.tsx";
 
 export const CustomImage = Image.extend({
+  group: "inline",
+  inline: true,
+  defining: true,
+  draggable: true,
+  selectable: true,
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageView);
+  },
   addAttributes() {
     return {
       ...this.parent?.(),
@@ -37,6 +47,69 @@ export const CustomImage = Image.extend({
           };
         },
       },
+      // 添加宽度属性
+      width: {
+        default: null,
+        parseHTML: (element) => {
+          const width =
+            element.style.width || element.getAttribute("width") || null;
+          return !width ? null : Number.parseInt(width, 10);
+        },
+        renderHTML: (attributes) => {
+          return {
+            width: attributes.width,
+          };
+        },
+      },
+      // 添加对齐属性
+      align: {
+        default: "center",
+        parseHTML: (element) => element.getAttribute("align"),
+        renderHTML: (attributes) => {
+          return {
+            align: attributes.align,
+          };
+        },
+      },
+      // 添加内联属性
+      inline: {
+        default: false,
+        parseHTML: (element) => Boolean(element.getAttribute("inline")),
+        renderHTML: (attributes) => {
+          return {
+            inline: attributes.inline,
+          };
+        },
+      },
+    };
+  },
+  // 添加命令
+  addCommands() {
+    return {
+      ...this.parent?.(),
+      setImageInline:
+        (options) =>
+        ({ commands }) => {
+          return commands.insertContent({
+            type: this.name,
+            attrs: {
+              ...options,
+              inline: options.inline ?? false,
+            },
+          });
+        },
+      updateImage:
+        (options) =>
+        ({ commands }) => {
+          return commands.updateAttributes(this.name, options);
+        },
+      setAlignImage:
+        (align) =>
+        ({ commands }) => {
+          return commands.updateAttributes(this.name, { align });
+        },
     };
   },
 });
+
+export default CustomImage;

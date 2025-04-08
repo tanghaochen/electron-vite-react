@@ -103,7 +103,7 @@
   }
 
   // 确保内容区域有足够的最小高度，但不超过容器
-  min-height: 300px;
+  // min-height: 300px;
 
   /* ===== 代码块样式 ===== */
   pre {
@@ -372,4 +372,80 @@ div[title="#FFFFFF"] {
   border-radius: 4px !important;
   background: none !important;
   position: absolute !important;
+}
+
+.image-view {
+  position: relative;
+  max-width: 100%;
+
+  &__body {
+    position: relative;
+    max-width: 100%;
+
+    &--focused {
+      outline: 2px solid #4dabf7;
+    }
+
+    &--resizing {
+      user-select: none;
+    }
+
+    &__image {
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+  }
+}
+
+.image-resizer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+
+  &__handler {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: #4dabf7;
+    border-radius: 50%;
+    pointer-events: all;
+
+    &--tl {
+      top: -5px;
+      left: -5px;
+      cursor: nwse-resize;
+    }
+
+    &--tr {
+      top: -5px;
+      right: -5px;
+      cursor: nesw-resize;
+    }
+
+    &--bl {
+      bottom: -5px;
+      left: -5px;
+      cursor: nesw-resize;
+    }
+
+    &--br {
+      bottom: -5px;
+      right: -5px;
+      cursor: nwse-resize;
+    }
+  }
+}
+
+// 图片容器样式
+.image {
+  max-width: 100%;
+
+  img {
+    max-width: 100%;
+    height: auto;
+  }
 }
