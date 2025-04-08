@@ -243,6 +243,38 @@ function setupIpcHandlers(
       secondaryWindow.webContents.send("pin-window", isPinned);
     }
   });
+
+  // 添加处理最小化窗口的IPC处理程序
+  ipcMain.on("minimize-window", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win && !win.isDestroyed()) {
+      win.minimize();
+    }
+  });
+
+  // 添加处理最大化/还原窗口的IPC处理程序
+  ipcMain.on("maximize-window", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win && !win.isDestroyed()) {
+      if (win.isMaximized()) {
+        win.unmaximize();
+        // 通知渲染进程窗口已还原
+        win.webContents.send("maximize-change", false);
+      } else {
+        win.maximize();
+        // 通知渲染进程窗口已最大化
+        win.webContents.send("maximize-change", true);
+      }
+    }
+  });
+
+  // 添加处理关闭窗口的IPC处理程序
+  ipcMain.on("close-window", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win && !win.isDestroyed()) {
+      win.close();
+    }
+  });
 }
 
 // 设置应用程序事件
@@ -273,6 +305,17 @@ function setupAppEvents(
     } else {
       windowManager.createMainWindow();
     }
+  });
+
+  // 为所有创建的窗口添加最大化和还原事件监听
+  app.on("browser-window-created", (_, window) => {
+    window.on("maximize", () => {
+      window.webContents.send("maximize-change", true);
+    });
+
+    window.on("unmaximize", () => {
+      window.webContents.send("maximize-change", false);
+    });
   });
 }
 

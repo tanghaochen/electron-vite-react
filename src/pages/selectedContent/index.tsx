@@ -13,6 +13,9 @@ import { noteContentDB } from "@/database/noteContentDB";
 import PushPinIcon from "@mui/icons-material/PushPin";
 import CloseIcon from "@mui/icons-material/Close";
 import SettingsIcon from "@mui/icons-material/Settings";
+import RemoveIcon from "@mui/icons-material/Remove";
+import CropSquareIcon from "@mui/icons-material/CropSquare";
+import FilterNoneIcon from "@mui/icons-material/FilterNone";
 import Button from "@mui/material/Button";
 import { styled } from "@mui/system";
 import DOMPurify from "dompurify";
@@ -250,6 +253,7 @@ const App = () => {
   const [customClipBoardContent, setCustomClipBoardContent] = useState("");
   const [isPinned, setIsPinned] = useState(false);
   const [isClosed, setIsClosed] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
   const items = [
     { id: 1, title: "Java" },
     { id: 2, title: "Python" },
@@ -272,6 +276,28 @@ const App = () => {
     window.ipcRenderer?.send("close-window");
     setIsClosed(true);
   };
+
+  const handleMinimize = () => {
+    window.ipcRenderer?.send("minimize-window");
+  };
+
+  const handleMaximize = () => {
+    window.ipcRenderer?.send("maximize-window");
+    setIsMaximized(!isMaximized);
+  };
+
+  // 监听窗口最大化/还原状态变化
+  useEffect(() => {
+    const handleMaximizeChange = (_: any, maximized: boolean) => {
+      setIsMaximized(maximized);
+    };
+
+    window.ipcRenderer?.on("maximize-change", handleMaximizeChange);
+
+    return () => {
+      window.ipcRenderer?.off?.("maximize-change", handleMaximizeChange);
+    };
+  }, []);
 
   const handleClipboardUpdate = useCallback((event: any, text: string) => {
     const cleanText = text.text
@@ -330,17 +356,45 @@ const App = () => {
         <Typography variant="caption" sx={{ color: "#fff" }}>
           内容高亮工具
         </Typography>
-        <IconButton
-          size="small"
-          onClick={handleClose}
-          sx={{
-            color: "#ef4444",
-            padding: "2px",
-            WebkitAppRegion: "no-drag", // 按钮不可拖拽
-          }}
-        >
-          <CloseIcon fontSize="small" />
-        </IconButton>
+        <Box sx={{ display: "flex", gap: "0.5rem" }}>
+          <IconButton
+            size="small"
+            onClick={handleMinimize}
+            sx={{
+              color: "#fff",
+              padding: "2px",
+              WebkitAppRegion: "no-drag", // 按钮不可拖拽
+            }}
+          >
+            <RemoveIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={handleMaximize}
+            sx={{
+              color: "#fff",
+              padding: "2px",
+              WebkitAppRegion: "no-drag", // 按钮不可拖拽
+            }}
+          >
+            {isMaximized ? (
+              <FilterNoneIcon fontSize="small" />
+            ) : (
+              <CropSquareIcon fontSize="small" />
+            )}
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={handleClose}
+            sx={{
+              color: "#ef4444",
+              padding: "2px",
+              WebkitAppRegion: "no-drag", // 按钮不可拖拽
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
       </ControlBar>
 
       <TextHighlighter

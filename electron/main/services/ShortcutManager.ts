@@ -19,9 +19,13 @@ export class ShortcutManager {
           const clipboardContent = await this.getSelectedContent(clipboard);
           console.log("clipboardContent", clipboardContent);
           win2.webContents.send("clipboard-update", clipboardContent);
-        }
 
-        this.windowManager.showSecondaryWindowAtCursor();
+          if (!win2.isVisible()) {
+            this.windowManager.showSecondaryWindowAtCursor();
+          }
+        } else {
+          this.windowManager.showSecondaryWindowAtCursor();
+        }
       });
     }
   }
