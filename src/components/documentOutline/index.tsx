@@ -377,10 +377,10 @@ export default function DocumentOutline({
     if (!editor || editor.isDestroyed) return;
 
     // 监听编辑器变化
-    const onUpdate = () => {
+    const onUpdate = debounce(() => {
       console.log("onUpdate");
       updateHeadings();
-    };
+    }, 100);
 
     editor.on("update", onUpdate);
 

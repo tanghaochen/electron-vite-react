@@ -50,6 +50,8 @@ import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import TableRow from "@tiptap/extension-table-row";
 import "./styles/index.scss";
+import Link from "@tiptap/extension-link";
+
 const extensions = [
   StarterKit.configure({
     italic: false,
@@ -61,6 +63,11 @@ const extensions = [
     heading: false,
   }),
   HeadingWithId,
+  Link.configure({
+    // protocols: ["ftp", "mailto"],
+    // autolink: true,
+    // linkOnPaste: true,
+  }),
   Color.configure({ types: [TextStyle.name, ListItem.name] }),
   TextStyle.configure({ types: [ListItem.name] }),
   Highlight.configure({ multicolor: true }),
