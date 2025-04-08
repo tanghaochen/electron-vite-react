@@ -44,6 +44,7 @@ const MenuBar = ({
       extType = "bold",
       toggleFunName,
       iconName,
+      toggleFunParam,
       disabled: externalDisabled = false,
     } = props;
     const toggleFun =
@@ -59,7 +60,7 @@ const MenuBar = ({
 
       // 直接执行命令，不使用链式API
       if (typeof editor.commands[toggleFun] === "function") {
-        editor.commands[toggleFun]();
+        editor.commands[toggleFun](toggleFunParam || undefined);
       }
     };
 
@@ -133,7 +134,9 @@ const MenuBar = ({
         {listTypeList.map((item, index) => {
           return <CommonBtn key={index} {...item} />;
         })}
+
         <Divider orientation="vertical" variant="middle" flexItem />
+
         {textAlignTypeList.map((item, index) => {
           return <CommonBtn key={index} {...item} />;
         })}
