@@ -50,13 +50,7 @@ const textColor = [
 
 // 注释跳转
 // @Link ./style.scss
-export default function HeadingSelector({
-  editor,
-  inputTitleValue,
-  setTabs,
-  tabItem,
-  setWorksList,
-}) {
+export default function HeadingSelector({ editor }) {
   const [open, setOpen] = React.useState(false);
   const anchorRef = React.useRef<HTMLDivElement>(null);
   //   关闭颜色选择器

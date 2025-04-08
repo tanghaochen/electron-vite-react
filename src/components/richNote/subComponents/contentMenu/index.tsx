@@ -18,12 +18,11 @@ import HeadingSelector from "@/components/richNote/subComponents/headingSelector
 import TpTable from "../tpTable";
 
 const MenuBar = ({
-  activeTabsItem,
   setTabs,
   tabItem,
-  setRichTextTitleInputValue,
   setWorksList,
-}) => {
+  isShowHeading = true,
+} = {}) => {
   const { editor } = useCurrentEditor();
   const [inputTitleValue, setInputTitleValue] = useState(tabItem.label);
   const editorRef = useRef(null);
@@ -84,25 +83,27 @@ const MenuBar = ({
 
   const handleInputTitleBlur = () => {
     // 更新tab标题数据
-    setTabs((tabs) => {
-      return tabs.map((tab) => {
-        if (tab.value === tabItem.value) {
-          tab.label = inputTitleValue;
+    setTabs &&
+      setTabs((tabs) => {
+        return tabs.map((tab) => {
+          if (tab.value === tabItem.value) {
+            tab.label = inputTitleValue;
+            return tab;
+          }
           return tab;
-        }
-        return tab;
+        });
       });
-    });
     // 更新worksBar组件标题数据
-    setWorksList((worksList) => {
-      return worksList.map((item) => {
-        if (item.id == tabItem.value) {
-          item.title = inputTitleValue;
+    setWorksList &&
+      setWorksList((worksList) => {
+        return worksList.map((item) => {
+          if (item.id == tabItem.value) {
+            item.title = inputTitleValue;
+            return item;
+          }
           return item;
-        }
-        return item;
+        });
       });
-    });
     console.log("tabItem", tabItem);
     // 同步数据库
     worksListDB.updateMetadata(tabItem.value, {
@@ -113,13 +114,7 @@ const MenuBar = ({
   return (
     <div className="control-group sticky top-0 z-10 bg-white">
       <div className="button-group inline-flex justify-start align-middle overflow-auto">
-        <HeadingSelector
-          editor={editor}
-          inputTitleValue={inputTitleValue}
-          setTabs={setTabs}
-          tabItem={tabItem} // 修正这里的错误，应该传递tabItem而不是setTabs
-          setWorksList={setWorksList}
-        />
+        <HeadingSelector editor={editor} />
 
         {extTypeList.map((item, index) => {
           return <CommonBtn key={index} {...item} />;
@@ -146,16 +141,18 @@ const MenuBar = ({
         <TpTable editor={editor} />
       </div>
       <div className="w-full my-4">
-        <input
-          className="border-none w-full font-bold text-4xl content-title focus:ring-0"
-          minLength={1}
-          maxLength={30}
-          size={10}
-          onChange={(e) => setInputTitleValue(e.target.value)}
-          value={inputTitleValue}
-          onBlur={handleInputTitleBlur}
-          placeholder={"请输入标题"}
-        />
+        {isShowHeading && (
+          <input
+            className="border-none w-full font-bold text-4xl content-title focus:ring-0"
+            minLength={1}
+            maxLength={30}
+            size={10}
+            onChange={(e) => setInputTitleValue(e.target.value)}
+            value={inputTitleValue}
+            onBlur={handleInputTitleBlur}
+            placeholder={"请输入标题"}
+          />
+        )}
       </div>
     </div>
   );
