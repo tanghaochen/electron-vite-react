@@ -9,6 +9,7 @@ import {
 } from "react-complex-tree";
 import "react-complex-tree/lib/style-modern.css";
 import "./styles.scss";
+import { debounce } from "lodash";
 
 // 自定义数据提供者实现
 class DocumentOutlineDataProvider implements TreeDataProvider {
@@ -101,7 +102,6 @@ class DocumentOutlineDataProvider implements TreeDataProvider {
         this.data[parentId].children = [];
       }
       this.data[parentId].children.push(id);
-      this.data[parentId].isFolder = true;
 
       // 通知父节点变化
       this.treeChangeListeners.forEach((listener) => listener([parentId]));
@@ -133,7 +133,6 @@ class DocumentOutlineDataProvider implements TreeDataProvider {
       this.treeChangeListeners.forEach((listener) => listener(["root"]));
       return;
     }
-    console.log("this.data", this.data);
     // 获取当前存在的标题ID
     const existingIds = new Set(Object.keys(this.data));
     existingIds.delete("root"); // 排除根节点
@@ -202,7 +201,7 @@ class DocumentOutlineDataProvider implements TreeDataProvider {
           level,
           position: heading.position,
           children: [],
-          isFolder: true,
+          isFolder: false,
         };
       } else {
         // 更新现有节点
@@ -265,7 +264,11 @@ class DocumentOutlineDataProvider implements TreeDataProvider {
   }
 }
 
-export default function DocumentOutline({ editor, activeTabsItem }) {
+export default function DocumentOutline({
+  editor,
+  activeTabsItem,
+  richTextEditorEleRef,
+}) {
   const [headings, setHeadings] = useState([]);
   const [expandedItems, setExpandedItems] = useState(["root"]);
   const [selectedItems, setSelectedItems] = useState([]);
@@ -273,10 +276,10 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
   const lastActiveTabsItemRef = useRef(null);
   const lastEditorRef = useRef(null);
   const observerRef = useRef(null);
+  const treeRef = useRef(null);
   const dataProviderRef = useRef(new DocumentOutlineDataProvider());
-  let index = 1;
   // 提取标题的函数
-  const updateHeadings = () => {
+  const updateHeadings = debounce(() => {
     if (!editor || editor.isDestroyed) return;
 
     try {
@@ -285,9 +288,11 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
 
       if (content && content.content) {
         // 查找文档中实际存在的标题元素
-        const headingElements = document.querySelectorAll(
-          ".ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6, .ProseMirror [role='heading']",
-        );
+        const headingElements = document
+          .querySelector(".react-tabs__tab-panel--selected")
+          .querySelectorAll(
+            ".ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6, .ProseMirror [role='heading']",
+          );
 
         // 创建DOM元素到位置的映射
         const elementPositionMap = new Map();
@@ -308,7 +313,7 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
             elementPositionMap.set(text.trim(), index);
           }
         });
-
+        headingsList.length = 0;
         // 从DOM中获取实际ID
         headingElements.forEach((element, idx) => {
           const text = element.textContent.trim();
@@ -327,8 +332,6 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
           });
         });
       }
-
-      console.log("headingsList", headingsList);
       setHeadings(headingsList);
 
       // 更新数据提供者
@@ -337,18 +340,18 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
       // 更新后重新设置 IntersectionObserver
       setTimeout(() => {
         setupIntersectionObserver();
+        treeRef.current.expandAll("root");
       }, 50);
     } catch (error) {
       console.error("更新标题时出错:", error);
     }
-  };
+  }, 10);
 
   // 检测标签页和编辑器变化
   useEffect(() => {
     const tabIdChanged =
       activeTabsItem?.value !== lastActiveTabsItemRef.current?.value;
     if (tabIdChanged) {
-      // dataProviderRef.current.clearData();
       dataProviderRef.current.updateHeadings([]);
     }
 
@@ -495,6 +498,7 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
       </div>
       {headings.length > 0 ? (
         <UncontrolledTreeEnvironment
+          defaultInteractionMode={"click-arrow-to-expand"}
           dataProvider={dataProviderRef.current}
           canDragAndDrop={false}
           canDropOnFolder={false}
@@ -550,7 +554,12 @@ export default function DocumentOutline({ editor, activeTabsItem }) {
             </a>
           )}
         >
-          <Tree treeId="outline" rootItem="root" treeLabel="文档目录" />
+          <Tree
+            treeId="outline"
+            rootItem="root"
+            ref={treeRef}
+            treeLabel="文档目录"
+          />
         </UncontrolledTreeEnvironment>
       ) : (
         <div className="empty-outline">

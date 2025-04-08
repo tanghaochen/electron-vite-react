@@ -317,6 +317,7 @@ export default function complexTree({ onSelectedTagChange }) {
       </div>
       <UncontrolledTreeEnvironment
         ref={environment}
+        defaultInteractionMode={"click-arrow-to-expand"}
         canDragAndDrop={true}
         canDropOnFolder={true}
         canReorderItems

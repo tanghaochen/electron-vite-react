@@ -119,7 +119,7 @@ export default ({
 }) => {
   const [richTextTitleInputValue, setRichTextTitleInputValue] = useState("");
   const lastActiveTabsItemRef = useRef(null);
-  const [forceUpdateKey, setForceUpdateKey] = useState(Date.now());
+  // const [forceUpdateKey, setForceUpdateKey] = useState(Date.now());
 
   const editor = useEditor({
     extensions,
@@ -183,7 +183,7 @@ export default ({
         setActiveRichTextEditor(editor);
 
         // 强制更新
-        setForceUpdateKey(Date.now());
+        // setForceUpdateKey(Date.now());
 
         // 自动聚焦编辑器
         setTimeout(() => {
@@ -219,7 +219,7 @@ export default ({
 
   return (
     <EditorProvider
-      key={`editor-${tabItem.value}-${forceUpdateKey}`}
+      // key={`editor-${tabItem.value}-${forceUpdateKey}`}
       slotBefore={
         <ContentMenu
           activeTabsItem={activeTabsItem}
