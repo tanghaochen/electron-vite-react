@@ -492,7 +492,7 @@ export default function DocumentOutline({
   };
 
   return (
-    <div className="document-outline">
+    <div className="document-outline overflow-auto">
       <div className="outline-header">
         <h3 className="text-zinc-800 font-bold p-4">文档目录</h3>
       </div>

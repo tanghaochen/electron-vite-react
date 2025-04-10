@@ -51,7 +51,7 @@ function App() {
         setCurrentTab={setCurrentTab}
         setActiveRichTextEditor={setActiveRichTextEditor}
       ></NoteContentOutline>
-      <div className="tableOfContents w-96 h-full bg-gray-50 border-0 border-l-2 border-solid border-l-gray-300">
+      <div className="tableOfContents w-96 h-full bg-gray-50 border-0 border-l-2 border-solid border-l-gray-300 overflow-clip">
         <DocumentOutline
           editor={activeRichTextEditor}
           activeTabsItem={currentTab}

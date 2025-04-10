@@ -8,6 +8,7 @@ const IMAGE_MIN_SIZE = 100;
 const IMAGE_THROTTLE_WAIT_TIME = 100;
 
 function ImageView(props) {
+  console.log("mageView(props) ", props);
   const [maxSize, setMaxSize] = useState({
     width: IMAGE_MAX_SIZE,
     height: IMAGE_MAX_SIZE,
@@ -60,13 +61,13 @@ function ImageView(props) {
     };
   }, [props?.node?.attrs]);
 
-  //   const imageMaxStyle = useMemo(() => {
-  //     const {
-  //       style: { width },
-  //     } = imgAttrs;
-  //     console.log(imgAttrs);
-  //     return { width: width === "100%" ? width : undefined };
-  //   }, [imgAttrs]);
+  const imageMaxStyle = useMemo(() => {
+    const {
+      style: { width },
+    } = imgAttrs;
+
+    return { width: width === "100%" ? width : undefined };
+  }, [imgAttrs]);
 
   function onImageLoad(e) {
     setOriginalSize({
@@ -217,16 +218,15 @@ function ImageView(props) {
       as={inline ? "span" : "div"}
       className="image-view"
       style={{
+        ...imageMaxStyle,
         textAlign: align,
-        display: inline ? "inline-flex" : "block",
+        display: inline ? "inline" : "block",
       }}
     >
       <div
         data-drag-handle
         draggable="true"
-        style={{
-          width: "fit-content",
-        }}
+        style={imageMaxStyle}
         className={`image-view__body ${
           props?.selected ? "image-view__body--focused" : ""
         } ${resizing ? "image-view__body--resizing" : ""}`}
