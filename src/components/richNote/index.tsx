@@ -122,6 +122,7 @@ type RichNoteProps = {
   setActiveRichTextEditor: (editor: any) => void; // 设置活动编辑器
   registerEditor: (id: string, editor: any) => void; // 注册编辑器实例
   isNoTab: boolean; // 是否没有标签页, 不用处理多tiptap实例, 不用管上面那么多参数
+  isShowHeading: boolean; // 是否显示标题
 };
 
 // 在组件外部定义防抖函数
@@ -139,6 +140,7 @@ export default React.memo(
     setActiveRichTextEditor,
     registerEditor,
     isNoTab = false,
+    isShowHeading = true,
   }: Partial<RichNoteProps>) => {
     const [richTextTitleInputValue, setRichTextTitleInputValue] = useState("");
     const lastActiveTabsItemRef = useRef(null);
@@ -252,6 +254,7 @@ export default React.memo(
             tabItem={tabItem}
             setRichTextTitleInputValue={setRichTextTitleInputValue}
             setWorksList={setWorksList}
+            isShowHeading={isShowHeading}
           />
         }
         extensions={extensions}

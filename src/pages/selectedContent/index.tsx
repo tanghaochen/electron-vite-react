@@ -259,6 +259,7 @@ const TextHighlighter = ({ textContent, items = [] }: HighlightProps) => {
             {/* <div dangerouslySetInnerHTML={{ __html: noteContent }}></div> */}
             <RichTextEditor
               tabItem={{ content: noteContent, value: activeNoteId }}
+              isShowHeading={false}
             />
           </div>
         </Panel>
