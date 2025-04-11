@@ -26,7 +26,9 @@ import {
   PanelResizeHandle,
 } from "react-resizable-panels";
 import { Breadcrumbs, Typography, Chip, IconButton, Box } from "@mui/material";
-import Link from "@mui/material/Link";
+// 富文本组件
+import RichTextEditor from "@/components/richNote";
+import "@/components/richNote/styles/index.scss";
 
 interface HighlightProps {
   textContent: string;
@@ -68,8 +70,12 @@ const KeywordsContainer = styled("div")({
 const TextHighlighter = ({ textContent, items = [] }: HighlightProps) => {
   const [highlightedText, setHighlightedText] = useState(textContent);
   const contentPreviewRef = useRef<HTMLDivElement>(null);
-  const [noteContent, setNoteContent] = useState("");
+  const [noteContent, setNoteContent] = useState(""); // 笔记内容
+  // 被点击显示的笔记id
+  const [activeNoteId, setActiveNoteId] = useState<number | null>(null);
+  // 找到的关键词
   const [foundKeywords, setFoundKeywords] = useState<string[]>([]);
+  // 当前活跃的关键词
   const [activeKeyword, setActiveKeyword] = useState<string | null>(null);
 
   const sortedItems = useMemo(() => {
@@ -167,13 +173,20 @@ const TextHighlighter = ({ textContent, items = [] }: HighlightProps) => {
       const noteItem = await noteContentDB.getContentByNoteId(id.toString());
       // 使用DOMPurify清理笔记内容
       setNoteContent(DOMPurify.sanitize(noteItem));
+      setActiveNoteId(id);
     } catch (error) {
       console.error("获取笔记内容失败:", error);
       setNoteContent("<p>获取笔记内容失败</p>");
+      setActiveNoteId(null);
     }
   };
 
   useEffect(() => {
+    console.log(textContent, items);
+  }, [textContent, items]);
+
+  useEffect(() => {
+    console.log(textContent, items);
     const handler = async (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.classList.contains("highlight")) {
@@ -188,9 +201,11 @@ const TextHighlighter = ({ textContent, items = [] }: HighlightProps) => {
           const noteItem = await noteContentDB.getContentByNoteId(id);
           // 使用DOMPurify清理笔记内容
           setNoteContent(DOMPurify.sanitize(noteItem));
+          setActiveNoteId(id);
         } catch (error) {
           console.error("获取笔记内容失败:", error);
           setNoteContent("<p>获取笔记内容失败</p>");
+          setActiveNoteId(null);
         }
       }
     };
@@ -241,7 +256,10 @@ const TextHighlighter = ({ textContent, items = [] }: HighlightProps) => {
             <div className="font-bold ">
               <div>笔记内容</div>
             </div>
-            <div dangerouslySetInnerHTML={{ __html: noteContent }}></div>
+            {/* <div dangerouslySetInnerHTML={{ __html: noteContent }}></div> */}
+            <RichTextEditor
+              tabItem={{ content: noteContent, value: activeNoteId }}
+            />
           </div>
         </Panel>
       </PanelGroup>
@@ -401,6 +419,7 @@ const App = () => {
         textContent={customClipBoardContent}
         items={highlightedKeywords}
       />
+      {/* <RichTextEditor /> */}
     </div>
   );
 };

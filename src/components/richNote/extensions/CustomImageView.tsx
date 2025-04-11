@@ -8,7 +8,6 @@ const IMAGE_MIN_SIZE = 100;
 const IMAGE_THROTTLE_WAIT_TIME = 100;
 
 function ImageView(props) {
-  console.log("mageView(props) ", props);
   const [maxSize, setMaxSize] = useState({
     width: IMAGE_MAX_SIZE,
     height: IMAGE_MAX_SIZE,

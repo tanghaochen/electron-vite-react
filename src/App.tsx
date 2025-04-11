@@ -43,6 +43,7 @@ function App() {
           />
         </div>
       </div>
+      {/* 笔记内容 */}
       <NoteContentOutline
         worksItem={worksItem}
         setWorksItem={setWorksItem}
@@ -52,6 +53,7 @@ function App() {
         setActiveRichTextEditor={setActiveRichTextEditor}
       ></NoteContentOutline>
       <div className="tableOfContents w-96 h-full bg-gray-50 border-0 border-l-2 border-solid border-l-gray-300 overflow-clip">
+        {/* 文档大纲 */}
         <DocumentOutline
           editor={activeRichTextEditor}
           activeTabsItem={currentTab}

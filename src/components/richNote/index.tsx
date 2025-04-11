@@ -1,10 +1,14 @@
-import "./styles.scss";
 import { Color } from "@tiptap/extension-color";
 import ListItem from "@tiptap/extension-list-item";
 import TextStyle from "@tiptap/extension-text-style";
-import { EditorProvider, useCurrentEditor, useEditor } from "@tiptap/react";
+import {
+  EditorContent,
+  EditorProvider,
+  useCurrentEditor,
+  useEditor,
+} from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import Button from "@mui/material/Button";
 import "material-symbols";
 import MenuItem from "@mui/material/MenuItem";
@@ -39,7 +43,6 @@ import Italic from "@tiptap/extension-italic";
 import ContentMenu from "./subComponents/contentMenu/index";
 import Placeholder from "@tiptap/extension-placeholder";
 import { noteContentDB } from "@/database/noteContentDB";
-import "./styles.scss";
 import { ImagePasteHandler } from "./extensions/ImagePasteHandler";
 import { CustomImage } from "./extensions/CustomImage.ts";
 import { ImageUpdateHandler } from "./extensions/ImageUpdateHandler";
@@ -49,8 +52,9 @@ import Table from "@tiptap/extension-table";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import TableRow from "@tiptap/extension-table-row";
-import "./styles/index.scss";
 import Link from "@tiptap/extension-link";
+import "./styles/index.scss";
+import { debounce, throttle } from "lodash";
 
 const extensions = [
   StarterKit.configure({
@@ -109,142 +113,178 @@ const extensions = [
   TableCell,
 ];
 
-export default ({
-  activeTabsItem,
-  tabItem,
-  setActiveTabsItem,
-  setTabs,
-  setWorksList,
-  setCurrentEditor,
-  setActiveRichTextEditor,
-  registerEditor,
-}) => {
-  const [richTextTitleInputValue, setRichTextTitleInputValue] = useState("");
-  const lastActiveTabsItemRef = useRef(null);
-  // const [forceUpdateKey, setForceUpdateKey] = useState(Date.now());
+type RichNoteProps = {
+  activeTabsItem: any; // 当前标签页
+  tabItem: any; // 标签页
+  setTabs: (tabs: any) => void; // 设置标签页
+  setWorksList: (list: any) => void; // 设置工作列表
+  setCurrentEditor: (editor: any) => void; // 设置当前编辑器
+  setActiveRichTextEditor: (editor: any) => void; // 设置活动编辑器
+  registerEditor: (id: string, editor: any) => void; // 注册编辑器实例
+  isNoTab: boolean; // 是否没有标签页, 不用处理多tiptap实例, 不用管上面那么多参数
+};
 
-  const editor = useEditor({
-    extensions,
-    content: tabItem.content,
-    onUpdate: ({ editor }) => {
-      // 更新内容时处理图片
-      const content = editor.getHTML();
-      // 避免在每次更新时都处理图片，可以设置节流或防抖
-      // 这里为了简单起见，暂不实现，但建议在实际应用中添加
-    },
-    onFocus: ({ editor }) => {
-      console.log("onFocus");
-      setActiveRichTextEditor(editor);
-    },
-    editorProps: {
-      attributes: {
-        spellcheck: "false", // 关闭拼写检查
-        autocorrect: "off", // 关闭自动更正
-        autocapitalize: "off", // 关闭自动大写
+// 在组件外部定义防抖函数
+const debouncedUpdateContent = debounce((value, content) => {
+  noteContentDB.updateContent(value, content);
+}, 500);
+
+export default React.memo(
+  ({
+    activeTabsItem,
+    tabItem = { content: "", value: "" },
+    setTabs,
+    setWorksList,
+    setCurrentEditor,
+    setActiveRichTextEditor,
+    registerEditor,
+    isNoTab = false,
+  }: Partial<RichNoteProps>) => {
+    const [richTextTitleInputValue, setRichTextTitleInputValue] = useState("");
+    const lastActiveTabsItemRef = useRef(null);
+    const [forceUpdateKey, setForceUpdateKey] = useState(Date.now());
+
+    const editor = useEditor({
+      extensions,
+      content:
+        typeof tabItem.content === "string" && tabItem.content.startsWith("{")
+          ? JSON.parse(tabItem.content)
+          : tabItem.content,
+      onUpdate: throttle(({ editor }) => {
+        // 图片处理逻辑
+      }, 1000),
+      onFocus: ({ editor }) => {
+        console.log("onFocus");
+        setActiveRichTextEditor && setActiveRichTextEditor(editor);
       },
-    },
-  });
-
-  // 将编辑器实例传递给父组件
-  useEffect(() => {
-    if (editor) {
-      setCurrentEditor(editor);
-
-      // 注册编辑器实例
-      if (registerEditor && tabItem.value) {
-        console.log("注册编辑器实例:", tabItem.value);
-        registerEditor(tabItem.value, editor);
-      }
-    }
-
-    return () => {
-      if (editor) {
-        setCurrentEditor(null);
-      }
-    };
-  }, [editor, setCurrentEditor, registerEditor, tabItem]);
-
-  // 监听标签页变化
-  useEffect(() => {
-    const tabIdChanged =
-      activeTabsItem?.value !== lastActiveTabsItemRef.current?.value;
-
-    if (tabIdChanged) {
-      console.log("activeTabsItem ID 变化:", activeTabsItem?.value);
-      console.log(
-        "上一个 activeTabsItem ID:",
-        lastActiveTabsItemRef.current?.value,
-      );
-
-      // 更新引用
-      lastActiveTabsItemRef.current = activeTabsItem;
-
-      // 设置当前编辑器为活动编辑器
-      if (editor && activeTabsItem?.value === tabItem.value) {
-        console.log("设置当前编辑器为活动编辑器:", tabItem.value);
-        setActiveRichTextEditor(editor);
-
-        // 强制更新
-        // setForceUpdateKey(Date.now());
-
-        // 自动聚焦编辑器
-        setTimeout(() => {
-          editor.commands.focus();
-        }, 100);
-      }
-    }
-  }, [activeTabsItem, tabItem, editor, setActiveRichTextEditor]);
-
-  // 监听标签页变化，自动聚焦当前编辑器
-  useEffect(() => {
-    // 检查当前标签页是否是活动标签页
-    if (editor && activeTabsItem && tabItem.value === activeTabsItem.value) {
-      console.log("自动聚焦编辑器:", tabItem.value);
-      // 使用setTimeout确保DOM已经完全渲染
-      setTimeout(() => {
-        editor.commands.focus();
-      }, 100);
-    }
-  }, [editor, activeTabsItem, tabItem]);
-
-  const handleTPBlur = (e) => {
-    // 获取改变的内容
-    const TPContent = e.editor.getHTML();
-    // 因为页面会缓存更改后的内容, 所以这里直接更新数据库, 也只有这一个地方更新笔记内容的数据库
-    noteContentDB.updateContent(tabItem.value, TPContent);
-  };
-
-  const handleTPFocus = (e) => {
-    console.log("handleTPFocus");
-    setActiveRichTextEditor(e.editor);
-  };
-
-  return (
-    <EditorProvider
-      // key={`editor-${tabItem.value}-${forceUpdateKey}`}
-      slotBefore={
-        <ContentMenu
-          activeTabsItem={activeTabsItem}
-          setTabs={setTabs}
-          tabItem={tabItem}
-          setRichTextTitleInputValue={setRichTextTitleInputValue}
-          setWorksList={setWorksList}
-        />
-      }
-      // slotAfter={<MenuBar/>}
-      extensions={extensions}
-      content={tabItem.content}
-      onBlur={handleTPBlur}
-      onFocus={handleTPFocus}
-      editorProps={{
+      editorProps: {
         attributes: {
           spellcheck: "false", // 关闭拼写检查
           autocorrect: "off", // 关闭自动更正
           autocapitalize: "off", // 关闭自动大写
-          class:
-            "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none",
         },
-      }}
-    ></EditorProvider>
-  );
-};
+      },
+    });
+
+    // 将编辑器实例传递给父组件
+    useEffect(() => {
+      if (!setCurrentEditor || !setActiveRichTextEditor || !editor) return;
+
+      setCurrentEditor(editor);
+
+      // 注册编辑器实例
+      if (registerEditor && tabItem.value) {
+        registerEditor(tabItem.value, editor);
+      }
+
+      return () => {
+        setCurrentEditor(null);
+      };
+    }, [editor, setCurrentEditor, registerEditor, tabItem.value]);
+
+    // 监听标签页变化
+    useEffect(() => {
+      if (!activeTabsItem) return;
+      const tabIdChanged =
+        activeTabsItem?.value !== lastActiveTabsItemRef.current?.value;
+
+      if (tabIdChanged) {
+        console.log("activeTabsItem ID 变化:", activeTabsItem?.value);
+        console.log(
+          "上一个 activeTabsItem ID:",
+          lastActiveTabsItemRef.current?.value,
+        );
+
+        // 更新引用
+        lastActiveTabsItemRef.current = activeTabsItem;
+
+        // 设置当前编辑器为活动编辑器
+        if (editor && activeTabsItem?.value === tabItem.value) {
+          console.log("设置当前编辑器为活动编辑器:", tabItem.value);
+          setActiveRichTextEditor && setActiveRichTextEditor(editor);
+
+          // 自动聚焦编辑器
+          setTimeout(() => {
+            editor.commands.focus();
+          }, 100);
+        }
+      }
+    }, [activeTabsItem, tabItem, editor, setActiveRichTextEditor]);
+
+    // 监听标签页变化，自动聚焦当前编辑器
+    useEffect(() => {
+      // 检查当前标签页是否是活动标签页
+      if (editor && activeTabsItem && tabItem.value === activeTabsItem.value) {
+        console.log("自动聚焦编辑器:", tabItem.value);
+        // 使用setTimeout确保DOM已经完全渲染
+        setTimeout(() => {
+          editor.commands.focus();
+        }, 100);
+      }
+    }, [editor, activeTabsItem, tabItem]);
+
+    const handleTPBlur = useCallback(
+      (e) => {
+        const TPContent = e.editor.getJSON();
+        debouncedUpdateContent(tabItem.value, TPContent);
+      },
+      [tabItem.value],
+    );
+
+    const handleTPFocus = useCallback(
+      (e) => {
+        setActiveRichTextEditor && setActiveRichTextEditor(e.editor);
+      },
+      [setActiveRichTextEditor],
+    );
+
+    useEffect(() => {
+      console.log(tabItem);
+      //   editor.at.div.hosts
+    }, [tabItem]);
+
+    return (
+      <EditorProvider
+        key={`editor-${tabItem.value}-${forceUpdateKey}`}
+        slotBefore={
+          <ContentMenu
+            setTabs={setTabs}
+            tabItem={tabItem}
+            setRichTextTitleInputValue={setRichTextTitleInputValue}
+            setWorksList={setWorksList}
+          />
+        }
+        extensions={extensions}
+        content={
+          typeof tabItem.content === "string" && tabItem.content.startsWith("{")
+            ? JSON.parse(tabItem.content)
+            : tabItem.content
+        }
+        onBlur={handleTPBlur}
+        immediatelyRender={true}
+        shouldRerenderOnTransaction={(oldState, newState) => {
+          // 只在特定情况下重新渲染
+          return oldState.doc.content !== newState.doc.content;
+        }}
+        onFocus={handleTPFocus}
+        editorProps={{
+          attributes: {
+            spellcheck: "false",
+            autocorrect: "off",
+            autocapitalize: "off",
+            class:
+              "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none",
+          },
+        }}
+      ></EditorProvider>
+      // <EditorContent editor={editor} />
+    );
+  },
+  (prevProps, nextProps) => {
+    // 自定义比较逻辑
+    return (
+      prevProps.tabItem.value === nextProps.tabItem.value &&
+      prevProps.activeTabsItem?.value === nextProps.activeTabsItem?.value
+    );
+  },
+);
