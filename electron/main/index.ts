@@ -332,3 +332,24 @@ function installDevExtensions() {
 
 // 启动应用
 app.whenReady().then(initApp);
+
+// 在创建窗口的代码中添加测试环境的处理
+function createWindow() {
+  // ...
+
+  // 根据环境加载不同的URL
+  if (process.env.VITE_DEV_SERVER_URL) {
+    win.loadURL(process.env.VITE_DEV_SERVER_URL);
+    console.log("Loading from dev server:", process.env.VITE_DEV_SERVER_URL);
+  } else if (process.env.NODE_ENV === "test") {
+    // 测试环境特殊处理
+    const testUrl = `file://${path.join(__dirname, "../../dist/index.html")}`;
+    console.log("Loading test URL:", testUrl);
+    win.loadURL(testUrl);
+  } else {
+    // 生产环境
+    win.loadFile(path.join(process.env.DIST, "index.html"));
+  }
+
+  // ...
+}
