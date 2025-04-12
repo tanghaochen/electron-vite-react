@@ -87,7 +87,7 @@ export default function BasicTabs({
           {tabs.map((tab) => (
             <Tab key={tab.value}>
               <div className="custom-tab-content">
-                <span>{tab.label}</span>
+                <span>{tab.label || "未命名"}</span>
                 <IconButton
                   size="small"
                   onClick={(e) => handleCloseTab(tab.value, e)}

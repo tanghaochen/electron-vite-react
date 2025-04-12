@@ -1,73 +1,75 @@
 // src/main/database/init.js
-import path from 'path';
-import { app } from 'electron';
-import Database from 'better-sqlite3';
-import fs from 'fs';
+import path from "path";
+import { app } from "electron";
+import Database from "better-sqlite3";
+import fs from "fs";
 
 // 确保testdata目录存在
-const testDataPath = path.resolve('testdata');
+const testDataPath = path.resolve("testdata");
 if (!fs.existsSync(testDataPath)) {
-    fs.mkdirSync(testDataPath, { recursive: true });
+  fs.mkdirSync(testDataPath, { recursive: true });
 }
 
-const dbPath = path.join(testDataPath, 'notes.db');
+const dbPath = path.join(testDataPath, "notes.db");
 
 let dbInstance = null;
 
 export function initDatabase() {
-    if (dbInstance) return dbInstance;
+  if (dbInstance) return dbInstance;
 
-    console.log('数据库路径:', dbPath);
+  console.log("数据库路径:", dbPath);
 
-    dbInstance = new Database(dbPath, {
-        verbose: process.env.NODE_ENV === 'development' ? console.log : null
-    });
+  dbInstance = new Database(dbPath, {
+    verbose: process.env.NODE_ENV === "development" ? console.log : null,
+  });
 
-    try {
-        // 第一步：基础配置
-        dbInstance.pragma('journal_mode = WAL');
-        dbInstance.pragma('foreign_keys = ON');
-        dbInstance.pragma('busy_timeout = 5000');
+  try {
+    // 第一步：基础配置
+    dbInstance.pragma("journal_mode = WAL");
+    dbInstance.pragma("foreign_keys = ON");
+    dbInstance.pragma("busy_timeout = 5000");
 
-        // 第二步：执行迁移
-        executeMigrations();
+    // 第二步：执行迁移
+    executeMigrations();
 
-        // 第三步：验证表结构
-        verifyTables();
+    // 第三步：验证表结构
+    verifyTables();
 
-        return dbInstance;
-    } catch (err) {
-        console.error('数据库初始化失败:', err);
-        if (dbInstance) dbInstance.close();
-        dbInstance = null;
-        throw err;
-    }
+    return dbInstance;
+  } catch (err) {
+    console.error("数据库初始化失败:", err);
+    if (dbInstance) dbInstance.close();
+    dbInstance = null;
+    throw err;
+  }
 }
 
 function executeMigrations() {
-    const expectedTables = [
-        'schema_version',
-        'categories',
-        'tags',
-        'tag_closure',
-        'notes_metadata',
-        'notes_content',
-        'note_tags',
-        'notes_fts'
-    ];
+  const expectedTables = [
+    "schema_version",
+    "categories",
+    "tags",
+    "tag_closure",
+    "notes_metadata",
+    "notes_content",
+    "note_tags",
+    "notes_fts",
+  ];
 
-    dbInstance.transaction(() => {
-        // 检查是否存在版本表
-        const hasSchemaVersion = dbInstance
-            .prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_version'")
-            .pluck()
-            .get();
+  dbInstance.transaction(() => {
+    // 检查是否存在版本表
+    const hasSchemaVersion = dbInstance
+      .prepare(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_version'",
+      )
+      .pluck()
+      .get();
 
-        if (!hasSchemaVersion) {
-            console.log('执行初始迁移...');
+    if (!hasSchemaVersion) {
+      console.log("执行初始迁移...");
 
-            // 创建基础表结构
-            dbInstance.exec(`
+      // 创建基础表结构
+      dbInstance.exec(`
                 CREATE TABLE schema_version (
                     version INTEGER PRIMARY KEY
                 );
@@ -77,9 +79,17 @@ function executeMigrations() {
                     uuid       TEXT NOT NULL UNIQUE DEFAULT (LOWER(HEX(RANDOMBLOB(16)))),
                     name       TEXT NOT NULL UNIQUE,
                     icon       TEXT NOT NULL DEFAULT 'folder',
+                    sort_order INTEGER DEFAULT 0,  -- 新增排序字段
                     color      TEXT DEFAULT '#3498db',
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE user_preferences (
+                    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id    TEXT NOT NULL DEFAULT '',
+                    settings_json TEXT NOT NULL,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
 
                 CREATE TABLE tags (
@@ -146,8 +156,8 @@ function executeMigrations() {
                 INSERT INTO schema_version (version) VALUES (1);
             `);
 
-            // 创建验证触发器
-            dbInstance.exec(`
+      // 创建验证触发器
+      dbInstance.exec(`
                 -- 标签表父标签验证触发器
                 CREATE TRIGGER validate_tag_parent BEFORE INSERT ON tags
                 BEGIN
@@ -187,80 +197,85 @@ function executeMigrations() {
                 END;
             `);
 
-            // 创建索引
-            dbInstance.exec(`
+      // 创建索引
+      dbInstance.exec(`
                 CREATE INDEX idx_tag_category ON tags(category_id);
                 CREATE INDEX idx_closure_category ON tag_closure(category_id);
             `);
 
-            // 插入测试数据
-            dbInstance.exec(`
-                INSERT INTO categories (name) VALUES ('默认分类');
-                
-                INSERT INTO tags (category_id, label, parent_id, sort_order) VALUES 
-                    (1, '语言学习', 0,1000),
-                    (1, '英语', 1,2000),
-                    (1, '日语', 1,1000);
-                
-                INSERT INTO tag_closure (ancestor, descendant, depth, category_id) VALUES
-                    (1, 1, 0, 1),
-                    (1, 2, 1, 1),
-                    (1, 3, 1, 1),
-                    (2, 2, 0, 1),
-                    (3, 3, 0, 1);
-            `);
-        } else {
-            console.log('检测到已有数据库，跳过初始迁移');
-        }
-    })();
+      // 插入测试数据
+      dbInstance.exec(`
+                  INSERT INTO categories (name) VALUES ('默认分类');
+              `);
+
+      // INSERT INTO tags (category_id, label, parent_id, sort_order) VALUES
+      //     (1, '语言学习', 0,1000),
+      //     (1, '英语', 1,2000),
+      //     (1, '日语', 1,1000);
+
+      // INSERT INTO tag_closure (ancestor, descendant, depth, category_id) VALUES
+      //     (1, 1, 0, 1),
+      //     (1, 2, 1, 1),
+      //     (1, 3, 1, 1),
+      //     (2, 2, 0, 1),
+      //     (3, 3, 0, 1);
+    } else {
+      console.log("检测到已有数据库，跳过初始迁移");
+    }
+  })();
 }
 
-
 function verifyTables() {
-    console.log('验证表结构...');
+  console.log("验证表结构...");
 
-    const tables = dbInstance
-        .prepare("SELECT name FROM sqlite_master WHERE type='table'")
-        .all()
-        .map(t => t.name);
+  const tables = dbInstance
+    .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+    .all()
+    .map((t) => t.name);
 
-    const requiredTables = [
-        'schema_version',
-        'tags',
-        'tag_closure',
-        'notes_metadata',
-        'notes_content',
-        'note_tags',
-        'notes_fts'
-    ];
+  const requiredTables = [
+    "schema_version",
+    "tags",
+    "tag_closure",
+    "notes_metadata",
+    "notes_content",
+    "note_tags",
+    "notes_fts",
+  ];
 
-    requiredTables.forEach(table => {
-        if (!tables.includes(table)) {
-            throw new Error(`缺失关键表: ${table}`);
-        }
-    });
+  requiredTables.forEach((table) => {
+    if (!tables.includes(table)) {
+      throw new Error(`缺失关键表: ${table}`);
+    }
+  });
 
-    console.log('表结构验证通过，发现以下表:', tables);
+  console.log("表结构验证通过，发现以下表:", tables);
 }
 
 // 调试用：打印数据库信息
 export function debugDatabase() {
-    if (!dbInstance) return;
+  if (!dbInstance) return;
 
-    console.log('--- 数据库调试信息 ---');
-    console.log('路径:', dbPath);
-    console.log('版本:', dbInstance.prepare('SELECT sqlite_version()').pluck().get());
+  console.log("--- 数据库调试信息 ---");
+  console.log("路径:", dbPath);
+  console.log(
+    "版本:",
+    dbInstance.prepare("SELECT sqlite_version()").pluck().get(),
+  );
 
-    const tables = dbInstance
-        .prepare("SELECT name FROM sqlite_master WHERE type='table'")
-        .all();
+  const tables = dbInstance
+    .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+    .all();
 
-    console.log('所有表:', tables.map(t => t.name));
+  console.log(
+    "所有表:",
+    tables.map((t) => t.name),
+  );
 
-    tables.forEach(table => {
-        const columns = dbInstance
-            .prepare(`PRAGMA table_info(${table.name})`)
-            .all();
-        console.log(`\n表结构 ${table.name}:`, columns);
-    });
+  tables.forEach((table) => {
+    const columns = dbInstance
+      .prepare(`PRAGMA table_info(${table.name})`)
+      .all();
+    console.log(`\n表结构 ${table.name}:`, columns);
+  });
 }

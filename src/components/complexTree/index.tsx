@@ -13,15 +13,17 @@ import { nanoid } from "nanoid";
 import contextMenuEvents from "@/components/complexTree/libs/contextMenuEvents";
 import "./styles/index.scss";
 import AddIcon from "@mui/icons-material/Add";
+import { worksListDB } from "@/database/worksLists";
+
 import Button from "@mui/material/Button";
-export default function complexTree({ onSelectedTagChange }) {
+export default function complexTree({ onSelectedTagChange, setWorksItem }) {
   // 默认数据
   const [items, setItems] = useState({
     root: {
       index: "root",
       isFolder: true,
       children: [],
-      label: "未命名标签",
+      label: "",
     },
   });
   const [focusedItem, setFocusedItem] = useState();
@@ -33,9 +35,10 @@ export default function complexTree({ onSelectedTagChange }) {
     mouseX: number;
     mouseY: number;
   } | null>(null);
-  // 当状态变化时触发回调
+  // 当状态变化时触发回调, 选中标签, 传递给父组件, 父组件提供给兄弟组件
   useEffect(() => {
     onSelectedTagChange && onSelectedTagChange(items[selectedItems]);
+    dataProvider.emitChange(["root"]); // 通知UI刷新
   }, [selectedItems]);
   // 将数据库获取的数组数据转换为组件需要的结构
   function convertToTree(data) {
@@ -53,7 +56,7 @@ export default function complexTree({ onSelectedTagChange }) {
       const nodeId = item.id.toString();
       nodes[nodeId] = {
         index: nodeId,
-        label: item.label || "未命名",
+        label: item.label || "",
         children: [],
         isFolder: true,
         sort_order: item.sort_order || 0, // 保留sort_order
@@ -158,7 +161,7 @@ export default function complexTree({ onSelectedTagChange }) {
         // TODO 删除所有被删除标签笔记
       };
       // 新增item, parentItemId=0表示根节点
-      injectItem = async (parentItemId = 0, label = "未命名") => {
+      injectItem = async (parentItemId = 0, label = "") => {
         const parentIdInTree =
           parentItemId === 0 ? "root" : String(parentItemId);
 
@@ -167,10 +170,17 @@ export default function complexTree({ onSelectedTagChange }) {
           tree.current.expandItem(parentIdInTree);
         }
 
-        // 同步数据库
+        // 同步数据库, 创建标签
         let newItemID = await tagsdb.createTag(1, label, parentItemId);
+        // 同步数据库, 创建词库
+        const worksListItem = await worksListDB.createMetadata({
+          tags_id: newItemID,
+          title: "", // 添加默认标题
+          sort_order: 0, // 自动生成排序序号
+        });
+        setWorksItem(worksListItem); // 让兄弟组件知道当前选中的词库, 打开对应的词库笔记列表数据
         newItemID = String(newItemID);
-
+        console.log("worksListItem", worksListItem);
         // 确保父节点存在
         if (parentIdInTree !== "root" && !this.data[parentIdInTree]) {
           console.error("父节点不存在:", parentIdInTree);
@@ -199,10 +209,14 @@ export default function complexTree({ onSelectedTagChange }) {
 
         // 延迟启动重命名
         this.newItemID = newItemID;
+
         setTimeout(() => {
+          setSelectedItems([newItemID]);
           if (tree.current) {
             tree.current.startRenamingItem(newItemID);
           }
+          // 触发UI更新
+          this.emitChange([parentIdInTree]);
         }, 100);
       };
     }
@@ -221,6 +235,11 @@ export default function complexTree({ onSelectedTagChange }) {
         // 👇重点：手动更新dataProvider的数据
         dataProvider.data = fetchedItems;
         dataProvider.emitChange(["root"]); // 通知UI刷新
+        setTimeout(() => {
+          if (tree.current) {
+            tree.current.expandAll("root");
+          }
+        }, 100);
       } catch (error) {
         console.error("数据获取失败:", error);
       }
@@ -367,7 +386,7 @@ export default function complexTree({ onSelectedTagChange }) {
             className="w-full h-full content-center text-base text-zinc-800"
             onContextMenu={(e) => handleContextMenu(e, item)}
           >
-            {item.title}
+            {item.title || "未命名标签"}
           </span>
         )}
         onDragStart={(items, source) => {

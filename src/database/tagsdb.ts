@@ -7,73 +7,116 @@ export const tagsdb = {
 
   /**
    * 创建标签（处理闭包表）
+   * @param {number} categoryId - 分类ID
+   * @param {string} label - 标签名称
+   * @param {number} [parentId=0] - 父标签ID，0表示顶级标签
+   * @param {string} [icon="tag"] - 标签图标
+   * @param {string} [color="#3498db"] - 标签颜色
+   * @returns {Promise<number>} - 返回新创建的标签ID
+   * @example
+   * // 创建顶级标签
+   * const newTagId = await tagsdb.createTag(1, "新标签");
+   *
+   * // 创建子标签
+   * const childTagId = await tagsdb.createTag(1, "子标签", parentId);
    */
   createTag: async (
-      categoryId,
-      label,
-      parentId = 0,
-      icon = "tag",
-      color = "#3498db",
+    categoryId,
+    label,
+    parentId = 0,
+    icon = "tag",
+    color = "#3498db",
   ) => {
     const categoryIdNum = Number(categoryId);
     const parentIdNum = Number(parentId);
 
-    // 修复点1：使用 tagsdb.query 替代 this.query
+    // 验证分类ID是否存在
+    const categoryExists = await tagsdb.query(
+      "SELECT 1 FROM categories WHERE id = ? LIMIT 1",
+      [categoryIdNum],
+    );
+
+    if (categoryExists.length === 0) {
+      throw new Error(`分类ID ${categoryIdNum} 不存在`);
+    }
+
+    // 如果有父标签，验证父标签是否存在且属于同一分类
+    if (parentIdNum !== 0) {
+      const parentExists = await tagsdb.query(
+        "SELECT 1 FROM tags WHERE id = ? AND category_id = ? LIMIT 1",
+        [parentIdNum, categoryIdNum],
+      );
+
+      if (parentExists.length === 0) {
+        throw new Error(
+          `父标签ID ${parentIdNum} 不存在或不属于分类 ${categoryIdNum}`,
+        );
+      }
+    }
+
+    // 获取同级标签中的最大排序值
     const [maxResult] = await tagsdb.query(
-        `SELECT COALESCE(MAX(sort_order), 0) AS max_order
+      `SELECT COALESCE(MAX(sort_order), 0) AS max_order
          FROM tags
-         WHERE parent_id = ?`,
-        [parentIdNum]
+         WHERE parent_id = ? AND category_id = ?`,
+      [parentIdNum, categoryIdNum],
     );
     const newSortOrder = maxResult.max_order + 1;
 
-    if (parentIdNum === 0) {
-      // 无父标签插入
-      const insertResult = await tagsdb.query( // 修复点2：统一使用 tagsdb.query
-          `INSERT INTO tags (category_id, parent_id, label, icon, color, sort_order)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [categoryIdNum, parentIdNum, label, icon, color, newSortOrder],
-      );
+    try {
+      // 开始事务
+      await tagsdb.query("BEGIN TRANSACTION");
 
-      await tagsdb.query( // 修复点3：保持统一调用方式
-          `INSERT INTO tag_closure (ancestor, descendant, category_id)
-           VALUES (?, ?, ?)`,
-          [insertResult.lastInsertRowid, insertResult.lastInsertRowid, categoryIdNum],
-      );
-
-      return insertResult.lastInsertRowid;
-    } else {
-      // 有父标签插入（使用显式事务控制）
-      try {
-        await tagsdb.query("BEGIN TRANSACTION");
-
-        const insertResult = await tagsdb.query(
-            `INSERT INTO tags (category_id, parent_id, label, icon, color, sort_order)
+      // 插入标签记录
+      const insertResult = await tagsdb.query(
+        `INSERT INTO tags (category_id, parent_id, label, icon, color, sort_order)
              VALUES (?, ?, ?, ?, ?, ?)`,
-            [categoryIdNum, parentIdNum, label, icon, color, newSortOrder],
-        );
-        const newTagId = insertResult.lastInsertRowid;
+        [categoryIdNum, parentIdNum, label, icon, color, newSortOrder],
+      );
 
+      const newTagId = insertResult.lastInsertRowid;
+
+      if (parentIdNum === 0) {
+        // 无父标签，只需插入自身的闭包记录
         await tagsdb.query(
-            `INSERT INTO tag_closure (ancestor, descendant, depth, category_id)
-             SELECT ancestor, ?, depth + 1, ?
-             FROM tag_closure
-             WHERE descendant = ?`,
-            [newTagId, categoryIdNum, parentIdNum],
+          `INSERT INTO tag_closure (ancestor, descendant, depth, category_id)
+                 VALUES (?, ?, 0, ?)`,
+          [newTagId, newTagId, categoryIdNum],
         );
-
+      } else {
+        // 有父标签，需要复制父标签的所有闭包记录
         await tagsdb.query(
-            `INSERT INTO tag_closure (ancestor, descendant, depth, category_id)
-             VALUES (?, ?, 0, ?)`,
-            [newTagId, newTagId, categoryIdNum],
+          `INSERT INTO tag_closure (ancestor, descendant, depth, category_id)
+                 SELECT ancestor, ?, depth + 1, ?
+                 FROM tag_closure
+                 WHERE descendant = ?`,
+          [newTagId, categoryIdNum, parentIdNum],
         );
 
-        await tagsdb.query("COMMIT");
-        return newTagId;
-      } catch (err) {
-        await tagsdb.query("ROLLBACK");
-        throw err;
+        // 添加自身的闭包记录
+        await tagsdb.query(
+          `INSERT INTO tag_closure (ancestor, descendant, depth, category_id)
+                 VALUES (?, ?, 0, ?)`,
+          [newTagId, newTagId, categoryIdNum],
+        );
       }
+
+      // 提交事务
+      await tagsdb.query("COMMIT");
+      return newTagId;
+    } catch (err) {
+      // 回滚事务
+      await tagsdb.query("ROLLBACK");
+      console.error("创建标签失败:", err);
+
+      // 提供更详细的错误信息
+      if (err.message.includes("FOREIGN KEY constraint failed")) {
+        throw new Error(`外键约束失败: 分类ID ${categoryIdNum} 可能不存在`);
+      } else if (err.message.includes("UNIQUE constraint failed")) {
+        throw new Error(`唯一约束失败: 可能存在同名标签`);
+      }
+
+      throw err;
     }
   },
   /**
@@ -87,8 +130,8 @@ export const tagsdb = {
       for (let i = 0; i < orderedIds.length; i++) {
         const id = orderedIds[i];
         await this.query(
-            "UPDATE tags SET sort_order = ? WHERE id = ? AND parent_id = ?",
-            [i, id, parentId]
+          "UPDATE tags SET sort_order = ? WHERE id = ? AND parent_id = ?",
+          [i, id, parentId],
         );
       }
       await this.query("COMMIT");

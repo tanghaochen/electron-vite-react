@@ -340,7 +340,7 @@ export default function DocumentOutline({
       // 更新后重新设置 IntersectionObserver
       setTimeout(() => {
         setupIntersectionObserver();
-        treeRef.current.expandAll("root");
+        treeRef.current?.expandAll("root");
       }, 50);
     } catch (error) {
       console.error("更新标题时出错:", error);

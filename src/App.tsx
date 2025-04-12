@@ -31,26 +31,29 @@ function App() {
       <div className="flex">
         {/*<NoteOutlineTree></NoteOutlineTree>*/}
         <div className="w-80 border-0 border-r-2 border-solid border-r-gray-300">
-          <ComplextTree onSelectedTagChange={setSelectedTag} />
+          <ComplextTree
+            onSelectedTagChange={setSelectedTag}
+            setWorksItem={setWorksItem}
+          />
         </div>
         <div className="w-80 border-0 border-r-2 border-solid border-r-gray-300">
           <WordsBar
-            selectedTagItem={selectedTag}
-            worksItem={worksItem}
-            setWorksItem={setWorksItem}
-            worksList={worksList}
-            setWorksList={setWorksList}
+            selectedTagItem={selectedTag} // 当前选中的标签, 打开词库列表
+            worksItem={worksItem} // 当前选中的词库, 打开词库笔记
+            setWorksItem={setWorksItem} // 设置当前选中的词库
+            worksList={worksList} // 词库列表
+            setWorksList={setWorksList} // 设置词库列表
           />
         </div>
       </div>
       {/* 笔记内容 */}
       <NoteContentOutline
-        worksItem={worksItem}
-        setWorksItem={setWorksItem}
-        setWorksList={setWorksList}
-        setCurrentEditor={setCurrentEditor}
-        setCurrentTab={setCurrentTab}
-        setActiveRichTextEditor={setActiveRichTextEditor}
+        worksItem={worksItem} // 当前选中的词库, 打开词库笔记
+        setWorksItem={setWorksItem} // 设置当前选中的词库
+        setWorksList={setWorksList} // 设置词库列表
+        setCurrentEditor={setCurrentEditor} // 设置当前编辑器
+        setCurrentTab={setCurrentTab} // 设置当前标签
+        setActiveRichTextEditor={setActiveRichTextEditor} // 设置当前富文本编辑器
       ></NoteContentOutline>
       <div className="tableOfContents w-96 h-full bg-gray-50 border-0 border-l-2 border-solid border-l-gray-300 overflow-clip">
         {/* 文档大纲 */}

@@ -1,6 +1,6 @@
-.worksBarlist{
+.worksBarlist {
   padding-left: 0;
-  margin: 0 .5rem;
+  margin: 0 0.5rem;
 }
 // CSS 样式部分
 .worksBarItem {
@@ -10,7 +10,7 @@
   align-items: center;
   height: 2.5rem;
   width: 100%; // 确保容器有明确宽度
-  border-radius: .5rem;
+  border-radius: 0.5rem;
 
   // 文字部分
   > span {
@@ -37,10 +37,14 @@
     }
   }
 
-  &:hover{
-    background: #EFF0F0;
+  &:hover {
+    background: #eff0f0;
     .optionBtn {
       display: flex !important;
     }
+  }
+
+  &.worksBarItem_active {
+    background: #eff0f0;
   }
 }

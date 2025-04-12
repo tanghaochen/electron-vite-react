@@ -1,4 +1,4 @@
-.rct-tree-root{
+.rct-tree-root {
   --rct-item-height: 2.4rem;
   --rct-color-tree-bg: transparent;
   --rct-color-search-highlight-bg: #acccf1;
@@ -27,10 +27,25 @@
   --rct-search-bg: #f8f9fa;
   --rct-search-text: #000000;
   //role为tree的样式
-  [role="tree"]{
+  [role="tree"] {
     //height: 100 !important;
   }
 
-  .rct-tree-items-container,.treeitem{
+  .rct-tree-items-container,
+  .treeitem {
   }
+}
+
+// .rct-tree-item-title-container-selected {
+//   background-color: #eff0f0;
+//   font-weight: bold;
+// }
+
+.rct-tree-item-button-selected {
+  background-color: #eff0f0 !important;
+  font-weight: bold;
+  // font-weight: inherit;
+}
+.rct-tree-item-button:focus-visible {
+  outline: none !important;
 }
