@@ -96,16 +96,13 @@ export default function WorksBar({
     setWorksListTitle(selectedTagItem?.label || "未命名");
     // 获取词库列表
     const fetchData = async () => {
-      console.log("selectedTagItem", selectedTagItem);
       if (!selectedTagItem) return;
       try {
         const worksListRes =
           (await worksListDB.getMetadataByTagId(selectedTagItem.index)) || [];
         setWorksList((item) => {
-          console.log("item,work", item, worksListRes);
           return item.concat(worksListRes);
         });
-        console.log("Items updated:", worksListRes);
       } catch (error) {
         console.error("数据获取失败:", error);
       }

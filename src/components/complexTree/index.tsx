@@ -17,7 +17,8 @@ import { worksListDB } from "@/database/worksLists";
 
 import Button from "@mui/material/Button";
 import { preferencesDB } from "@/database/perferencesDB";
-export default function complexTree({ onSelectedTagChange, setWorksItem }) {
+
+const ComplexTree = ({ onSelectedTagChange, setWorksItem }) => {
   // 默认数据
   const [items, setItems] = useState({
     root: {
@@ -229,14 +230,39 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
   // 监听数据变化
   useEffect(() => {
     const fetchPreferences = async () => {
-      const preferences = await preferencesDB.getPreferences();
-      if (preferences?.tagsTreeState) {
-        tree.current.focusItem(preferences.tagsTreeState.focusedItem || "");
-        tree.current.toggleItemSelectStatus(
-          preferences.tagsTreeState.selectedItems[0] || "",
-        );
+      try {
+        const preferences = await preferencesDB.getPreferences();
+        if (!tree.current) return; // 确保 tree.current 存在
+
+        // 安全地访问 tagsTreeState
+        const tagsTreeState = preferences?.tagsTreeState;
+        if (tagsTreeState) {
+          // 确保所有值都存在再执行操作
+          const focusedItem = tagsTreeState.focusedItem;
+          const selectedItem = tagsTreeState.selectedItems?.[0];
+
+          // 确保 focusedItem 存在且在当前数据中
+          if (focusedItem && dataProvider.data[focusedItem]) {
+            try {
+              tree.current.focusItem(focusedItem);
+            } catch (error) {
+              console.warn("无法聚焦项目:", focusedItem);
+            }
+          }
+
+          // 确保 selectedItem 存在且在当前数据中
+          if (selectedItem && dataProvider.data[selectedItem]) {
+            try {
+              tree.current.toggleItemSelectStatus(selectedItem);
+            } catch (error) {
+              console.warn("无法选择项目:", selectedItem);
+            }
+          }
+        }
+        return preferences;
+      } catch (error) {
+        console.error("加载偏好设置失败:", error);
       }
-      return preferences;
     };
     // Fetch data from the database
     const fetchData = async () => {
@@ -244,15 +270,19 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
         const getTreeData = await tagsdb.getTagsByCategory(1);
         const fetchedItems = convertToTree(getTreeData);
         setItems(fetchedItems);
-        // 👇重点：手动更新dataProvider的数据
         dataProvider.data = fetchedItems;
-        // dataProvider.emitChange(["root"]); // 通知UI刷新
+
+        // 等待一段时间确保树已经渲染完成
         setTimeout(async () => {
           if (tree.current) {
-            await fetchPreferences();
-            tree.current.expandAll("root");
+            try {
+              await fetchPreferences();
+              tree.current.expandAll("root");
+            } catch (error) {
+              console.error("展开树失败:", error);
+            }
           }
-        }, 0);
+        }, 100);
       } catch (error) {
         console.error("数据获取失败:", error);
       }
@@ -263,11 +293,6 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
   // 监听保存变化的状态
   useEffect(() => {
     if (!focusedItem || !selectedItems.length) return;
-    console.log("saving state:", {
-      focusedItem,
-      expandedItems,
-      selectedItems,
-    });
     preferencesDB.updatePreferences({
       tagsTreeState: {
         focusedItem,
@@ -430,4 +455,6 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
       />
     </div>
   );
-}
+};
+
+export default ComplexTree;
