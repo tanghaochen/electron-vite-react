@@ -16,6 +16,7 @@ import AddIcon from "@mui/icons-material/Add";
 import { worksListDB } from "@/database/worksLists";
 
 import Button from "@mui/material/Button";
+import { preferencesDB } from "@/database/perferencesDB";
 export default function complexTree({ onSelectedTagChange, setWorksItem }) {
   // 默认数据
   const [items, setItems] = useState({
@@ -26,9 +27,11 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
       label: "",
     },
   });
+
+  const environment = useRef(null);
+  const tree = useRef(null);
   const [focusedItem, setFocusedItem] = useState();
   const [expandedItems, setExpandedItems] = useState([]);
-  //
   const [selectedItems, setSelectedItems] = useState([]);
   // 右键菜单
   const [contextMenu, setContextMenu] = React.useState<{
@@ -40,6 +43,7 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
     onSelectedTagChange && onSelectedTagChange(items[selectedItems]);
     dataProvider.emitChange(["root"]); // 通知UI刷新
   }, [selectedItems]);
+
   // 将数据库获取的数组数据转换为组件需要的结构
   function convertToTree(data) {
     const nodes = {};
@@ -85,8 +89,6 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
     nodes.root = root;
     return nodes;
   }
-  const environment = useRef();
-  const tree = useRef();
 
   const dataProvider = useMemo(() => {
     class CustomDataProvider {
@@ -224,28 +226,58 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
     return new CustomDataProvider();
   }, []);
 
+  // 监听数据变化
   useEffect(() => {
+    const fetchPreferences = async () => {
+      const preferences = await preferencesDB.getPreferences();
+      if (preferences?.tagsTreeState) {
+        tree.current.focusItem(preferences.tagsTreeState.focusedItem || "");
+        tree.current.toggleItemSelectStatus(
+          preferences.tagsTreeState.selectedItems[0] || "",
+        );
+      }
+      return preferences;
+    };
     // Fetch data from the database
     const fetchData = async () => {
       try {
         const getTreeData = await tagsdb.getTagsByCategory(1);
         const fetchedItems = convertToTree(getTreeData);
         setItems(fetchedItems);
-
         // 👇重点：手动更新dataProvider的数据
         dataProvider.data = fetchedItems;
-        dataProvider.emitChange(["root"]); // 通知UI刷新
-        setTimeout(() => {
+        // dataProvider.emitChange(["root"]); // 通知UI刷新
+        setTimeout(async () => {
           if (tree.current) {
+            await fetchPreferences();
             tree.current.expandAll("root");
           }
-        }, 100);
+        }, 0);
       } catch (error) {
         console.error("数据获取失败:", error);
       }
     };
     fetchData();
   }, [dataProvider]);
+
+  // 监听保存变化的状态
+  useEffect(() => {
+    if (!focusedItem || !selectedItems.length) return;
+    console.log("saving state:", {
+      focusedItem,
+      expandedItems,
+      selectedItems,
+    });
+    preferencesDB.updatePreferences({
+      tagsTreeState: {
+        focusedItem,
+        expandedItems,
+        selectedItems,
+      },
+      tabsByOpen: expandedItems,
+      activeTab: focusedItem,
+    });
+  }, [focusedItem, expandedItems, selectedItems]);
 
   const useContextMenuEvents = contextMenuEvents({
     contextMenu,
@@ -340,30 +372,20 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
         canDragAndDrop={true}
         canDropOnFolder={true}
         canReorderItems
-        canDropOnNonFolder // 建议false，防止非文件夹意外接收子节点
+        canDropOnNonFolder
         canDropBelowOpenFolders
         disableMultiselect
-        getItemTitle={(item) => item.label} // 指定lable
+        getItemTitle={(item) => item.label}
         dataProvider={dataProvider}
         viewState={{
           ["root"]: {
             focusedItem,
             expandedItems,
             selectedItems,
+            activeTab: focusedItem,
           },
         }}
-        // viewstate:记录控制状态
-        // viewState={{
-        //     ['tree-1']: {
-        //         focusedItem: 'America',
-        //         selectedItems: ['America', 'Europe', 'Asia'],
-        //         expandedItems: ['Meals', 'Drinks'],
-        //     },
-        // }}
-        onFocusItem={(item) => setFocusedItem(item.label)}
-        // onExpandItem={(item) =>
-        //   setExpandedItems([...expandedItems, item.index])
-        // }
+        onFocusItem={(item) => setFocusedItem(item.index)}
         onCollapseItem={(item) =>
           setExpandedItems(
             expandedItems.filter(
@@ -371,16 +393,13 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
             ),
           )
         }
+        onExpandItem={(item) =>
+          setExpandedItems([...expandedItems, item.index])
+        }
         onRenameItem={(item, name) => dataProvider.renameItem(item, name)}
         onSelectItems={(items) => {
           setSelectedItems(items);
         }}
-        // 重命名回调
-        // 展开箭头
-        // renderItemArrow={({ item, context }) =>
-        //     context?.children?.length
-        // }
-        // renderItem={renderItem} // 自定义渲染某个item
         renderItemTitle={(item) => (
           <span
             className="w-full h-full content-center text-base text-zinc-800"

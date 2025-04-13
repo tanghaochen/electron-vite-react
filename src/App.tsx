@@ -8,7 +8,7 @@ import Button from "@mui/material/Button";
 import AddIcon from "@mui/icons-material/Add";
 import Stack from "@mui/material/Stack";
 import "@/assets/globalStyles.scss";
-import ComplextTree from "@/components/complexTree";
+import ComplextTree from "@/components/complexTree/index.tsx";
 import DocumentOutline from "@/components/documentOutline";
 
 function App() {
