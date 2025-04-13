@@ -17,8 +17,7 @@ import { worksListDB } from "@/database/worksLists";
 
 import Button from "@mui/material/Button";
 import { preferencesDB } from "@/database/perferencesDB";
-
-const ComplexTree = ({ onSelectedTagChange, setWorksItem }) => {
+export default function complexTree({ onSelectedTagChange, setWorksItem }) {
   // 默认数据
   const [items, setItems] = useState({
     root: {
@@ -241,22 +240,12 @@ const ComplexTree = ({ onSelectedTagChange, setWorksItem }) => {
           const focusedItem = tagsTreeState.focusedItem;
           const selectedItem = tagsTreeState.selectedItems?.[0];
 
-          // 确保 focusedItem 存在且在当前数据中
-          if (focusedItem && dataProvider.data[focusedItem]) {
-            try {
-              tree.current.focusItem(focusedItem);
-            } catch (error) {
-              console.warn("无法聚焦项目:", focusedItem);
-            }
+          if (focusedItem) {
+            tree.current.focusItem(focusedItem);
           }
 
-          // 确保 selectedItem 存在且在当前数据中
-          if (selectedItem && dataProvider.data[selectedItem]) {
-            try {
-              tree.current.toggleItemSelectStatus(selectedItem);
-            } catch (error) {
-              console.warn("无法选择项目:", selectedItem);
-            }
+          if (selectedItem) {
+            tree.current.toggleItemSelectStatus(selectedItem);
           }
         }
         return preferences;
@@ -272,17 +261,13 @@ const ComplexTree = ({ onSelectedTagChange, setWorksItem }) => {
         setItems(fetchedItems);
         dataProvider.data = fetchedItems;
 
-        // 等待一段时间确保树已经渲染完成
-        setTimeout(async () => {
+        // 使用 Promise.resolve().then 确保 DOM 已更新
+        Promise.resolve().then(async () => {
           if (tree.current) {
-            try {
-              await fetchPreferences();
-              tree.current.expandAll("root");
-            } catch (error) {
-              console.error("展开树失败:", error);
-            }
+            await fetchPreferences();
+            tree.current.expandAll("root");
           }
-        }, 100);
+        });
       } catch (error) {
         console.error("数据获取失败:", error);
       }
@@ -455,6 +440,4 @@ const ComplexTree = ({ onSelectedTagChange, setWorksItem }) => {
       />
     </div>
   );
-};
-
-export default ComplexTree;
+}
