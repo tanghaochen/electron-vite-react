@@ -232,21 +232,29 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
       try {
         const preferences = await preferencesDB.getPreferences();
         if (!tree.current) return; // 确保 tree.current 存在
-
+        console.log("preferences", preferences);
         // 安全地访问 tagsTreeState
         const tagsTreeState = preferences?.tagsTreeState;
         if (tagsTreeState) {
           // 确保所有值都存在再执行操作
           const focusedItem = tagsTreeState.focusedItem;
           const selectedItem = tagsTreeState.selectedItems?.[0];
+          // console.log(
+          //   "focusedItem,selectedItem",
+          //   dataProvider.data,
+          //   focusedItem,
+          //   selectedItem,
+          // );
+          setTimeout(() => {
+            // console.log("tree.current", tree.current);
+            if (focusedItem) {
+              tree.current.focusItem(focusedItem);
+            }
 
-          if (focusedItem) {
-            tree.current.focusItem(focusedItem);
-          }
-
-          if (selectedItem) {
-            tree.current.toggleItemSelectStatus(selectedItem);
-          }
+            if (selectedItem) {
+              tree.current.toggleItemSelectStatus(focusedItem);
+            }
+          }, 2000);
         }
         return preferences;
       } catch (error) {
@@ -258,16 +266,17 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
       try {
         const getTreeData = await tagsdb.getTagsByCategory(1);
         const fetchedItems = convertToTree(getTreeData);
+        console.log("fetchedItems,getTreeData", fetchedItems, getTreeData);
         setItems(fetchedItems);
         dataProvider.data = fetchedItems;
+        await fetchPreferences();
 
-        // 使用 Promise.resolve().then 确保 DOM 已更新
-        Promise.resolve().then(async () => {
+        setTimeout(async () => {
           if (tree.current) {
             await fetchPreferences();
-            tree.current.expandAll("root");
+            // tree.current.expandAll("root");
           }
-        });
+        }, 500);
       } catch (error) {
         console.error("数据获取失败:", error);
       }
