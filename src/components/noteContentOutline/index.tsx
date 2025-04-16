@@ -7,6 +7,7 @@ import { worksListDB } from "@/database/worksLists";
 import { noteContentDB } from "@/database/noteContentDB";
 import { IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import { preferencesDB } from "@/database/perferencesDB";
 
 export default function BasicTabs({
   worksItem,
@@ -16,8 +17,11 @@ export default function BasicTabs({
   setCurrentTab,
   setActiveRichTextEditor,
 }) {
+  // 打开的tab数组
   const [tabs, setTabs] = React.useState([]);
+  // 当前选中的tab的index, 从0开始, 显示打开第几个tab
   const [selectedIndex, setSelectedIndex] = React.useState(0);
+  // 当前选中的tab
   const [activeTabsItem, setActiveTabsItem] = React.useState({});
 
   // 同步当前选中标签
@@ -25,19 +29,62 @@ export default function BasicTabs({
     if (tabs.length > 0 && selectedIndex >= tabs.length) {
       setSelectedIndex(tabs.length - 1);
     }
-
-    // 更新当前活动标签
-    if (tabs.length > 0 && selectedIndex >= 0 && selectedIndex < tabs.length) {
-      const currentTab = tabs[selectedIndex];
-      setCurrentTab(currentTab);
-      setActiveTabsItem(currentTab); // 确保更新活动标签项
-    } else {
-      setCurrentTab(null);
-      setActiveTabsItem(null);
-    }
+    const updateCurrentTab = async () => {
+      // 更新当前活动标签
+      if (
+        tabs.length > 0 &&
+        selectedIndex >= 0 &&
+        selectedIndex < tabs.length
+      ) {
+        const currentTab = tabs[selectedIndex];
+        setCurrentTab(currentTab);
+        setActiveTabsItem(currentTab); // 确保更新活动标签项
+        // 记录被选中的tab, 是合并重叠的方式更新{...currentTab}
+        // tab去掉content保存
+        const noContentTabs = tabs.map((tab) => ({
+          ...tab,
+          content: "",
+        }));
+        // console.log("更新当前活动标签", currentTab);
+        preferencesDB.updatePreferences({
+          openedTabs: noContentTabs,
+          selectedTab: currentTab,
+          selectedIndex: selectedIndex,
+        });
+      } else {
+        setCurrentTab(null);
+        setActiveTabsItem(null);
+      }
+    };
+    updateCurrentTab();
   }, [tabs, selectedIndex, setCurrentTab]);
 
-  // 添加新标签页
+  // 页面加载时，恢复上次打开的tab
+  useEffect(() => {
+    const fetchOpenedTabs = async () => {
+      const preferencesRes = await preferencesDB.getPreferences();
+      const { openedTabs, selectedIndex, selectedTab } = preferencesRes;
+      console.log("openedTabs", preferencesRes, openedTabs);
+      // 恢复content
+      const openedTabsData = await Promise.all(
+        openedTabs.map(async (tab) => ({
+          ...tab,
+          content: await noteContentDB.getContentByNoteId(tab.id),
+        })),
+      );
+      console.log("openedTabs", openedTabsData);
+      setTabs(openedTabsData);
+      // 恢复被选中的tab
+      console.log("preferencesRes", preferencesRes);
+      setActiveTabsItem(selectedTab); // 切换到新标签
+      setCurrentTab(selectedTab);
+      setSelectedIndex(selectedIndex);
+      return;
+    };
+    fetchOpenedTabs();
+  }, []);
+
+  // 点击词条 添加新标签页
   useEffect(() => {
     const fetchAndAddTab = async () => {
       if (!worksItem?.id) return;
@@ -60,6 +107,18 @@ export default function BasicTabs({
       };
 
       setTabs((prev) => [...prev, newTab]);
+      // 记录打开的tab, 不记录content
+      const openedTabs = tabs?.map((tab) => ({
+        id: tab.id,
+        label: tab.label,
+        value: tab.value,
+      }));
+      console.log("openedTabs", openedTabs, tabs);
+      // 记录打开了哪些tab, 不记录content
+      preferencesDB.updatePreferences({
+        openedTabs: [...openedTabs, newTab],
+      });
+
       setSelectedIndex(tabs.length); // 切换到新标签
     };
 
