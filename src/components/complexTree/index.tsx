@@ -38,11 +38,6 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
     mouseX: number;
     mouseY: number;
   } | null>(null);
-  // 当状态变化时触发回调, 选中标签, 传递给父组件, 父组件提供给兄弟组件
-  useEffect(() => {
-    onSelectedTagChange && onSelectedTagChange(items[selectedItems]);
-    dataProvider.emitChange(["root"]); // 通知UI刷新
-  }, [selectedItems]);
 
   // 将数据库获取的数组数据转换为组件需要的结构
   function convertToTree(data) {
@@ -230,6 +225,20 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
     return new CustomDataProvider();
   }, []);
 
+  // 当状态变化时触发回调, 选中标签, 传递给父组件, 父组件提供给兄弟组件
+  useEffect(() => {
+    onSelectedTagChange && onSelectedTagChange(items[selectedItems]);
+    // 获取标签数状态
+    console.log(
+      "dataProvider",
+      tree.current,
+      expandedItems,
+      selectedItems,
+      focusedItem,
+    );
+    dataProvider.emitChange(["root"]); // 通知UI刷新
+  }, [selectedItems]);
+
   // 监听数据变化
   useEffect(() => {
     const fetchPreferences = async () => {
@@ -252,14 +261,23 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
           );
           setTimeout(() => {
             // console.log("tree.current", tree.current);
-            if (focusedItem) {
-              tree.current.focusItem(focusedItem);
+            if (tagsTreeState.expandedItems.length) {
+              setExpandedItems(tagsTreeState.expandedItems);
+              // 倒叙
+              tagsTreeState.expandedItems.reverse().forEach((item) => {
+                console.log("expandItem", tree.current, item);
+                // tree.current.expandItem(item);
+              });
             }
-
-            if (selectedItem) {
-              tree.current.toggleItemSelectStatus(focusedItem);
-            }
-          }, 1000);
+            setTimeout(() => {
+              if (focusedItem) {
+                tree.current.focusItem(focusedItem);
+              }
+              if (selectedItem) {
+                tree.current.toggleItemSelectStatus(focusedItem);
+              }
+            }, 100);
+          }, 1500);
         }
         return preferences;
       } catch (error) {
@@ -270,16 +288,22 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
     const fetchData = async () => {
       try {
         const getTreeData = await tagsdb.getTagsByCategory(1);
+        // const preferences = await preferencesDB.getPreferences();
+        // const tagsTreeState = preferences?.tagsTreeState;
+        // setExpandedItems(tagsTreeState.expandedItems);
+
         const fetchedItems = convertToTree(getTreeData);
         console.log("fetchedItems,getTreeData", fetchedItems, getTreeData);
         setItems(fetchedItems);
         dataProvider.data = fetchedItems;
-        await fetchPreferences();
+
+        // await fetchPreferences();
 
         setTimeout(async () => {
+          // tree.current.expandAll("root");
+
           if (tree.current) {
             await fetchPreferences();
-            // tree.current.expandAll("root");
           }
         }, 500);
       } catch (error) {
@@ -298,8 +322,8 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
         expandedItems,
         selectedItems,
       },
-      tabsByOpen: expandedItems,
-      activeTab: focusedItem,
+      // tabsByOpen: expandedItems,
+      // activeTab: focusedItem,
     });
   }, [focusedItem, expandedItems, selectedItems]);
 
