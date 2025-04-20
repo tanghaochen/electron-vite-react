@@ -31,7 +31,7 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
   const environment = useRef(null);
   const tree = useRef(null);
   const [focusedItem, setFocusedItem] = useState();
-  const [expandedItems, setExpandedItems] = useState([]);
+  const [expandedItems, setExpandedItems] = useState(["9", "16"]);
   const [selectedItems, setSelectedItems] = useState([]);
   // 右键菜单
   const [contextMenu, setContextMenu] = React.useState<{
@@ -290,28 +290,28 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
         const getTreeData = await tagsdb.getTagsByCategory(1);
         // const preferences = await preferencesDB.getPreferences();
         // const tagsTreeState = preferences?.tagsTreeState;
-        // setExpandedItems(tagsTreeState.expandedItems);
 
         const fetchedItems = convertToTree(getTreeData);
         console.log("fetchedItems,getTreeData", fetchedItems, getTreeData);
         setItems(fetchedItems);
         dataProvider.data = fetchedItems;
+        setExpandedItems(["9", "16"]);
 
         // await fetchPreferences();
 
-        setTimeout(async () => {
-          // tree.current.expandAll("root");
+        // setTimeout(async () => {
+        //   // tree.current.expandAll("root");
 
-          if (tree.current) {
-            await fetchPreferences();
-          }
-        }, 500);
+        //   if (tree.current) {
+        //     await fetchPreferences();
+        //   }
+        // }, 500);
       } catch (error) {
         console.error("数据获取失败:", error);
       }
     };
     fetchData();
-  }, [dataProvider]);
+  }, []);
 
   // 监听保存变化的状态
   useEffect(() => {
@@ -436,7 +436,8 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
         getItemTitle={(item) => item.label}
         dataProvider={dataProvider}
         viewState={{
-          ["root"]: {
+          // 必须和下面的 <tree /> 的 treeId 一致
+          ["tree-1"]: {
             focusedItem,
             expandedItems,
             selectedItems,
