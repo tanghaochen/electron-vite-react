@@ -116,7 +116,11 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
         });
       };
 
-      // 主要用于拖拽后的数据变化监听
+      /**
+       * 主要用于拖拽后的数据变化监听
+       * @param itemId drop, 拖拽结束的id
+       * @param newChildren  被拖拽的元素的子元素, id数组
+       */
       async onChangeItemChildren(itemId, newChildren) {
         console.log("itemId, newChildren", itemId, newChildren);
         this.data[itemId].children = newChildren;
@@ -239,12 +243,13 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
           // 确保所有值都存在再执行操作
           const focusedItem = tagsTreeState.focusedItem;
           const selectedItem = tagsTreeState.selectedItems?.[0];
-          // console.log(
-          //   "focusedItem,selectedItem",
-          //   dataProvider.data,
-          //   focusedItem,
-          //   selectedItem,
-          // );
+          console.log(
+            "分类标签 > 恢复之前的聚焦",
+            // dataProvider.data,
+            tagsTreeState,
+            focusedItem,
+            selectedItem,
+          );
           setTimeout(() => {
             // console.log("tree.current", tree.current);
             if (focusedItem) {
@@ -254,7 +259,7 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
             if (selectedItem) {
               tree.current.toggleItemSelectStatus(focusedItem);
             }
-          }, 2000);
+          }, 1000);
         }
         return preferences;
       } catch (error) {
@@ -306,15 +311,15 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
     dataProvider,
   });
 
-  const handleItemDrop = (items, target) => {
+  const handleItemDrop = (hyDrag, target) => {
     /**
      * @item 选中的被拖拽的元素
      * @target drop拖拽结束的元素
      */
     console.log(
       "拖拽结束:",
-      items,
-      "目标:",
+      hyDrag,
+      "target:",
       target,
       "的",
       target.linePosition,
@@ -322,12 +327,22 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
     );
     const dropItemID =
       target.parentItem === "root" ? "0" : target.parentItem || 0;
-    items.forEach((item) => {
-      tagsdb.updateTag(item.index, {
-        parent_id: dropItemID,
-      });
-    });
 
+    if (!target.targetItem) {
+      hyDrag.forEach((item) => {
+        tagsdb.updateTag(item.index, {
+          parent_id: dropItemID,
+        });
+      });
+    } else {
+      hyDrag.forEach((item) => {
+        tagsdb.updateTag(item.index, {
+          parent_id: target.targetItem,
+        });
+      });
+    }
+
+    console.log("dataProvider.dropList", dataProvider.dropList);
     dataProvider.dropList.forEach((item, index) => {
       console.log("item", item, index);
       tagsdb.updateTag(item, {

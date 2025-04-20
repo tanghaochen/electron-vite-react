@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import NoteContent from "./components/noteContent";
 import NoteContentOutline from "./components/noteContentOutline";
 import NoteOutlineTree from "./components/noteOutlineTagTree";
@@ -8,12 +8,22 @@ import Button from "@mui/material/Button";
 import AddIcon from "@mui/icons-material/Add";
 import Stack from "@mui/material/Stack";
 import "@/assets/globalStyles.scss";
-import ComplextTree from "@/components/complexTree/index.tsx";
+import ComplextTree from "@/components/complexTree";
 import DocumentOutline from "@/components/documentOutline";
+
+interface TreeItemData {
+  index: string;
+  isFolder: boolean;
+  children: string[];
+  label: string;
+  parent_id?: number;
+  sort_order?: number;
+  data?: any;
+}
 
 function App() {
   // 点击标签树
-  const [selectedTag, setSelectedTag] = useState(0);
+  const [selectedTag, setSelectedTag] = useState<TreeItemData | null>(null);
   // 被点击词库列表worksBar, 打开词库笔记
   const [worksItem, setWorksItem] = useState({});
   // 词库列表数据
@@ -21,6 +31,7 @@ function App() {
   const [currentEditor, setCurrentEditor] = useState(null);
   const [currentTab, setCurrentTab] = useState(null);
   const [activeRichTextEditor, setActiveRichTextEditor] = useState(null);
+  const richTextEditorEleRef = useRef(null);
 
   useEffect(() => {
     console.log("selectedTag", selectedTag);
@@ -60,7 +71,7 @@ function App() {
         <DocumentOutline
           editor={activeRichTextEditor}
           activeTabsItem={currentTab}
-          // activeRichTextEditor={activeRichTextEditor}
+          richTextEditorEleRef={richTextEditorEleRef}
         />
       </div>
     </div>
