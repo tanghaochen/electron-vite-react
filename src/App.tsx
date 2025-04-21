@@ -34,7 +34,7 @@ function App() {
   const richTextEditorEleRef = useRef(null);
 
   useEffect(() => {
-    console.log("selectedTag", selectedTag);
+    console.trace("selectedTag>>>", selectedTag);
   }, [selectedTag]);
 
   return (

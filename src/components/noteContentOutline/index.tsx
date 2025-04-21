@@ -2,12 +2,13 @@ import * as React from "react";
 import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
 import "react-tabs/style/react-tabs.css";
 import RichNote from "../richNote";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { worksListDB } from "@/database/worksLists";
 import { noteContentDB } from "@/database/noteContentDB";
 import { IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { preferencesDB } from "@/database/perferencesDB";
+import ReactDOM from "react-dom";
 
 export default function BasicTabs({
   worksItem,
@@ -23,6 +24,7 @@ export default function BasicTabs({
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   // 当前选中的tab
   const [activeTabsItem, setActiveTabsItem] = React.useState({});
+  const [isLoading, setIsLoading] = useState(true);
 
   // 同步当前选中标签
   useEffect(() => {
@@ -61,27 +63,48 @@ export default function BasicTabs({
 
   // 页面加载时，恢复上次打开的tab
   useEffect(() => {
+    let isMounted = true;
+
     const fetchOpenedTabs = async () => {
-      const preferencesRes = await preferencesDB.getPreferences();
-      const { openedTabs, selectedIndex, selectedTab } = preferencesRes;
-      console.log("openedTabs", preferencesRes, openedTabs);
-      // 恢复content
-      const openedTabsData = await Promise.all(
-        openedTabs.map(async (tab) => ({
-          ...tab,
-          content: await noteContentDB.getContentByNoteId(tab.id),
-        })),
-      );
-      console.log("openedTabs", openedTabsData);
-      setTabs(openedTabsData);
-      // 恢复被选中的tab
-      console.log("preferencesRes", preferencesRes);
-      setActiveTabsItem(selectedTab); // 切换到新标签
-      setCurrentTab(selectedTab);
-      setSelectedIndex(selectedIndex);
-      return;
+      try {
+        setIsLoading(true);
+        if (!isMounted) return;
+
+        const preferencesRes = await preferencesDB.getPreferences();
+        if (!isMounted) return;
+
+        const { openedTabs, selectedIndex, selectedTab } = preferencesRes;
+        if (!openedTabs?.length || !isMounted) return;
+
+        const openedTabsData = await Promise.all(
+          openedTabs.map(async (tab) => ({
+            ...tab,
+            content: await noteContentDB.getContentByNoteId(tab.id),
+          })),
+        );
+
+        if (!isMounted) return;
+
+        ReactDOM.unstable_batchedUpdates(() => {
+          setTabs(openedTabsData);
+          setActiveTabsItem(selectedTab);
+          setCurrentTab(selectedTab);
+          setSelectedIndex(selectedIndex);
+          setIsLoading(false);
+        });
+      } catch (error) {
+        console.error("Error fetching opened tabs:", error);
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
     };
+
     fetchOpenedTabs();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // 点击词条 添加新标签页
@@ -134,50 +157,62 @@ export default function BasicTabs({
     });
   };
 
+  useEffect(() => {
+    console.log("Tabs changed:", tabs);
+  }, [tabs]);
+
+  useEffect(() => {
+    console.log("ActiveTabsItem changed:", activeTabsItem);
+  }, [activeTabsItem]);
+
   return (
     <div className="flex-1 relative overflow-hidden">
-      <Tabs
-        selectedIndex={selectedIndex}
-        onSelect={(index) => setSelectedIndex(index)}
-        forceRenderTabPanel
-      >
-        <TabList>
-          {tabs.map((tab) => (
-            <Tab key={tab.value}>
-              <div className="custom-tab-content">
-                <span>{tab.label || "未命名"}</span>
-                <IconButton
-                  size="small"
-                  onClick={(e) => handleCloseTab(tab.value, e)}
-                  sx={{
-                    p: 0,
-                    ml: 1,
-                    "&:hover": { backgroundColor: "rgba(0,0,0,0.08)" },
-                  }}
-                >
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              </div>
-            </Tab>
-          ))}
-        </TabList>
+      {isLoading ? (
+        <div>加载中...</div>
+      ) : (
+        <Tabs
+          selectedIndex={selectedIndex}
+          onSelect={(index) => setSelectedIndex(index)}
+          forceRenderTabPanel
+        >
+          <TabList>
+            {tabs.map((tab) => (
+              <Tab key={tab.value}>
+                <div className="custom-tab-content">
+                  <span>{tab.label || "未命名"}</span>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => handleCloseTab(tab.value, e)}
+                    sx={{
+                      p: 0,
+                      ml: 1,
+                      "&:hover": { backgroundColor: "rgba(0,0,0,0.08)" },
+                    }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </div>
+              </Tab>
+            ))}
+          </TabList>
 
-        <div className={"w-auto"}>
-          {tabs.map((tab) => (
-            <TabPanel key={tab.value}>
-              <RichNote
-                activeTabsItem={activeTabsItem}
-                tabItem={tab}
-                setTabs={setTabs}
-                setActiveTabsItem={setActiveTabsItem}
-                setWorksList={setWorksList}
-                setCurrentEditor={setCurrentEditor}
-                setActiveRichTextEditor={setActiveRichTextEditor}
-              />
-            </TabPanel>
-          ))}
-        </div>
-      </Tabs>
+          <div className={"w-auto"}>
+            {tabs.map((tab) => (
+              <TabPanel key={tab.value}>
+                <RichNote
+                  activeTabsItem={activeTabsItem}
+                  tabItem={tab}
+                  setTabs={setTabs}
+                  setActiveTabsItem={setActiveTabsItem}
+                  setWorksList={setWorksList}
+                  setCurrentEditor={setCurrentEditor}
+                  setActiveRichTextEditor={setActiveRichTextEditor}
+                />
+              </TabPanel>
+            ))}
+          </div>
+        </Tabs>
+      )}
     </div>
   );
 }

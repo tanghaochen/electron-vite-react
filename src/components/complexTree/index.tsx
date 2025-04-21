@@ -14,10 +14,13 @@ import contextMenuEvents from "@/components/complexTree/libs/contextMenuEvents";
 import "./styles/index.scss";
 import AddIcon from "@mui/icons-material/Add";
 import { worksListDB } from "@/database/worksLists";
+import { preferencesDB } from "@/database/perferencesDB";
+import ReactDOM from "react-dom";
 
 import Button from "@mui/material/Button";
-import { preferencesDB } from "@/database/perferencesDB";
+
 export default function complexTree({ onSelectedTagChange, setWorksItem }) {
+  const [isLoading, setIsLoading] = useState(true);
   // 默认数据
   const [items, setItems] = useState({
     root: {
@@ -30,8 +33,9 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
 
   const environment = useRef(null);
   const tree = useRef(null);
-  const [focusedItem, setFocusedItem] = useState();
-  const [expandedItems, setExpandedItems] = useState(["9", "16"]);
+  const [focusedItem, setFocusedItem] = useState("");
+  // "9", "16"
+  const [expandedItems, setExpandedItems] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
   // 右键菜单
   const [contextMenu, setContextMenu] = React.useState<{
@@ -125,7 +129,7 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
 
       onDidChangeTreeData = (listener) => {
         this.listeners.push(listener);
-        console.log("onDidChangeTreeData");
+        console.log("onDidChangeTreeData", this.data);
         return {
           dispose: () =>
             (this.listeners = this.listeners.filter((l) => l !== listener)),
@@ -239,78 +243,76 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
     dataProvider.emitChange(["root"]); // 通知UI刷新
   }, [selectedItems]);
 
-  // 监听数据变化
+  // 修改数据加载的 useEffect
   useEffect(() => {
-    const fetchPreferences = async () => {
-      try {
-        const preferences = await preferencesDB.getPreferences();
-        if (!tree.current) return; // 确保 tree.current 存在
-        console.log("preferences", preferences);
-        // 安全地访问 tagsTreeState
-        const tagsTreeState = preferences?.tagsTreeState;
-        if (tagsTreeState) {
-          // 确保所有值都存在再执行操作
-          const focusedItem = tagsTreeState.focusedItem;
-          const selectedItem = tagsTreeState.selectedItems?.[0];
-          console.log(
-            "分类标签 > 恢复之前的聚焦",
-            // dataProvider.data,
-            tagsTreeState,
-            focusedItem,
-            selectedItem,
-          );
-          setTimeout(() => {
-            // console.log("tree.current", tree.current);
-            if (tagsTreeState.expandedItems.length) {
-              setExpandedItems(tagsTreeState.expandedItems);
-              // 倒叙
-              tagsTreeState.expandedItems.reverse().forEach((item) => {
-                console.log("expandItem", tree.current, item);
-                // tree.current.expandItem(item);
-              });
-            }
-            setTimeout(() => {
-              if (focusedItem) {
-                tree.current.focusItem(focusedItem);
-              }
-              if (selectedItem) {
-                tree.current.toggleItemSelectStatus(focusedItem);
-              }
-            }, 100);
-          }, 1500);
-        }
-        return preferences;
-      } catch (error) {
-        console.error("加载偏好设置失败:", error);
-      }
-    };
-    // Fetch data from the database
+    let isMounted = true;
+
     const fetchData = async () => {
       try {
+        setIsLoading(true);
+        if (!isMounted) return;
+
         const getTreeData = await tagsdb.getTagsByCategory(1);
-        // const preferences = await preferencesDB.getPreferences();
-        // const tagsTreeState = preferences?.tagsTreeState;
+        if (!isMounted) return;
 
         const fetchedItems = convertToTree(getTreeData);
         console.log("fetchedItems,getTreeData", fetchedItems, getTreeData);
-        setItems(fetchedItems);
-        dataProvider.data = fetchedItems;
-        setExpandedItems(["9", "16"]);
 
-        // await fetchPreferences();
+        if (!isMounted) return;
 
-        // setTimeout(async () => {
-        //   // tree.current.expandAll("root");
+        // 使用批量更新来减少重渲染
+        ReactDOM.unstable_batchedUpdates(() => {
+          setItems(fetchedItems);
+          dataProvider.data = fetchedItems;
+          setExpandedItems(["9", "16"]);
+          setIsLoading(false);
+        });
 
-        //   if (tree.current) {
-        //     await fetchPreferences();
-        //   }
-        // }, 500);
+        // 延迟加载偏好设置
+        setTimeout(async () => {
+          if (!isMounted) return;
+          try {
+            const preferences = await preferencesDB.getPreferences();
+            if (!isMounted || !tree.current) return;
+
+            const tagsTreeState = preferences?.tagsTreeState;
+            if (tagsTreeState) {
+              const focusedItem = tagsTreeState.focusedItem;
+              const selectedItem = tagsTreeState.selectedItems?.[0];
+
+              if (tagsTreeState.expandedItems.length) {
+                setExpandedItems(tagsTreeState.expandedItems);
+                tagsTreeState.expandedItems.reverse().forEach((item) => {
+                  if (tree.current) {
+                    tree.current.expandItem(item);
+                  }
+                });
+              }
+
+              if (focusedItem && tree.current) {
+                tree.current.focusItem(focusedItem);
+              }
+              if (selectedItem && tree.current) {
+                tree.current.toggleItemSelectStatus(focusedItem);
+              }
+            }
+          } catch (error) {
+            console.error("加载偏好设置失败:", error);
+          }
+        }, 1500);
       } catch (error) {
         console.error("数据获取失败:", error);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
+
     fetchData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // 监听保存变化的状态
@@ -424,61 +426,65 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
           <AddIcon fontSize="small" />
         </Button>
       </div>
-      <UncontrolledTreeEnvironment
-        ref={environment}
-        defaultInteractionMode={"click-arrow-to-expand"}
-        canDragAndDrop={true}
-        canDropOnFolder={true}
-        canReorderItems
-        canDropOnNonFolder
-        canDropBelowOpenFolders
-        disableMultiselect
-        getItemTitle={(item) => item.label}
-        dataProvider={dataProvider}
-        viewState={{
-          // 必须和下面的 <tree /> 的 treeId 一致
-          ["tree-1"]: {
-            focusedItem,
-            expandedItems,
-            selectedItems,
-            activeTab: focusedItem,
-          },
-        }}
-        onFocusItem={(item) => setFocusedItem(item.index)}
-        onCollapseItem={(item) =>
-          setExpandedItems(
-            expandedItems.filter(
-              (expandedItemIndex) => expandedItemIndex !== item.index,
-            ),
-          )
-        }
-        onExpandItem={(item) =>
-          setExpandedItems([...expandedItems, item.index])
-        }
-        onRenameItem={(item, name) => dataProvider.renameItem(item, name)}
-        onSelectItems={(items) => {
-          setSelectedItems(items);
-        }}
-        renderItemTitle={(item) => (
-          <span
-            className="w-full h-full content-center text-base text-zinc-800"
-            onContextMenu={(e) => handleContextMenu(e, item)}
-          >
-            {item.title || "未命名标签"}
-          </span>
-        )}
-        onDragStart={(items, source) => {
-          console.log("拖拽开始:", items, "来自:", source);
-        }}
-        onDrop={handleItemDrop}
-      >
-        <Tree
-          treeId="tree-1"
-          rootItem="root"
-          treeLabel="Tree Example"
-          ref={tree}
-        />
-      </UncontrolledTreeEnvironment>
+      {isLoading ? (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-gray-500">加载中...</div>
+        </div>
+      ) : (
+        <UncontrolledTreeEnvironment
+          ref={environment}
+          defaultInteractionMode={"click-arrow-to-expand"}
+          canDragAndDrop={true}
+          canDropOnFolder={true}
+          canReorderItems
+          canDropOnNonFolder
+          canDropBelowOpenFolders
+          disableMultiselect
+          getItemTitle={(item) => item.label}
+          dataProvider={dataProvider}
+          viewState={{
+            ["tree-1"]: {
+              focusedItem,
+              expandedItems,
+              selectedItems,
+            },
+          }}
+          onFocusItem={(item) => setFocusedItem(item.index)}
+          onCollapseItem={(item) =>
+            setExpandedItems(
+              expandedItems.filter(
+                (expandedItemIndex) => expandedItemIndex !== item.index,
+              ),
+            )
+          }
+          onExpandItem={(item) =>
+            setExpandedItems([...expandedItems, item.index])
+          }
+          onRenameItem={(item, name) => dataProvider.renameItem(item, name)}
+          onSelectItems={(items) => {
+            setSelectedItems(items);
+          }}
+          renderItemTitle={(item) => (
+            <span
+              className="w-full h-full content-center text-base text-zinc-800"
+              onContextMenu={(e) => handleContextMenu(e, item)}
+            >
+              {item.title || "未命名标签"}
+            </span>
+          )}
+          onDragStart={(items, source) => {
+            console.log("拖拽开始:", items, "来自:", source);
+          }}
+          onDrop={handleItemDrop}
+        >
+          <Tree
+            treeId="tree-1"
+            rootItem="root"
+            treeLabel="Tree Example"
+            ref={tree}
+          />
+        </UncontrolledTreeEnvironment>
+      )}
       <ContextMenu
         onClose={useContextMenuEvents.handleCloseMenu}
         onEdit={useContextMenuEvents.handleEditItem}
