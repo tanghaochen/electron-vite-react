@@ -252,58 +252,94 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
         setIsLoading(true);
         if (!isMounted) return;
 
+        // 获取数据
         const getTreeData = await tagsdb.getTagsByCategory(1);
+        const preferences = await preferencesDB.getPreferences();
+
         if (!isMounted) return;
 
+        // 转换树数据
         const fetchedItems = convertToTree(getTreeData);
         console.log("fetchedItems,getTreeData", fetchedItems, getTreeData);
 
         if (!isMounted) return;
 
-        // 使用批量更新来减少重渲染
+        // 初始化默认状态
+        let initialState = {
+          expandedItems: [],
+          focusedItem: null,
+          selectedItems: [],
+        };
+
+        // 如果有保存的状态，尝试使用它
+        if (preferences?.tagsTreeState) {
+          const { expandedItems, focusedItem, selectedItems } =
+            preferences.tagsTreeState;
+
+          // 验证每个状态的有效性
+          initialState = {
+            expandedItems: Array.isArray(expandedItems) ? expandedItems : [],
+            focusedItem: focusedItem || null,
+            selectedItems: Array.isArray(selectedItems) ? selectedItems : [],
+          };
+        }
+
+        // 批量更新状态
         ReactDOM.unstable_batchedUpdates(() => {
           setItems(fetchedItems);
           dataProvider.data = fetchedItems;
-          setExpandedItems(["9", "16"]);
+          setExpandedItems(initialState.expandedItems);
+          setFocusedItem(initialState.focusedItem);
+          setSelectedItems(initialState.selectedItems);
           setIsLoading(false);
         });
 
-        // 延迟加载偏好设置
-        setTimeout(async () => {
-          if (!isMounted) return;
-          try {
-            const preferences = await preferencesDB.getPreferences();
-            if (!isMounted || !tree.current) return;
-
-            const tagsTreeState = preferences?.tagsTreeState;
-            if (tagsTreeState) {
-              const focusedItem = tagsTreeState.focusedItem;
-              const selectedItem = tagsTreeState.selectedItems?.[0];
-
-              if (tagsTreeState.expandedItems.length) {
-                setExpandedItems(tagsTreeState.expandedItems);
-                tagsTreeState.expandedItems.reverse().forEach((item) => {
-                  if (tree.current) {
-                    tree.current.expandItem(item);
-                  }
-                });
-              }
-
-              if (focusedItem && tree.current) {
-                tree.current.focusItem(focusedItem);
-              }
-              if (selectedItem && tree.current) {
-                tree.current.toggleItemSelectStatus(focusedItem);
-              }
+        // 如果树已经加载，应用保存的状态
+        if (tree.current) {
+          // 展开节点
+          initialState.expandedItems.forEach((itemId) => {
+            if (fetchedItems[itemId]) {
+              // 确保节点存在
+              tree.current.expandItem(itemId);
             }
-          } catch (error) {
-            console.error("加载偏好设置失败:", error);
+          });
+
+          // 设置焦点
+          if (
+            initialState.focusedItem &&
+            fetchedItems[initialState.focusedItem]
+          ) {
+            tree.current.focusItem(initialState.focusedItem);
           }
-        }, 1500);
+
+          // 设置选中项
+          if (initialState.selectedItems.length > 0) {
+            const validSelectedItems = initialState.selectedItems.filter(
+              (itemId) => fetchedItems[itemId],
+            );
+            if (validSelectedItems.length > 0) {
+              tree.current.selectItems(validSelectedItems);
+            }
+          }
+        }
       } catch (error) {
         console.error("数据获取失败:", error);
         if (isMounted) {
-          setIsLoading(false);
+          // 发生错误时设置默认状态
+          ReactDOM.unstable_batchedUpdates(() => {
+            setItems({
+              root: {
+                index: "root",
+                isFolder: true,
+                children: [],
+                label: "",
+              },
+            });
+            setExpandedItems([]);
+            setFocusedItem(null);
+            setSelectedItems([]);
+            setIsLoading(false);
+          });
         }
       }
     };
