@@ -44,7 +44,7 @@ import ContentMenu from "./subComponents/contentMenu/index";
 import Placeholder from "@tiptap/extension-placeholder";
 import { noteContentDB } from "@/database/noteContentDB";
 import { ImagePasteHandler } from "./extensions/ImagePasteHandler";
-import { CustomImage } from "./extensions/CustomImage.ts";
+import { CustomImage } from "./extensions/CustomImage";
 import { ImageUpdateHandler } from "./extensions/ImageUpdateHandler";
 import { CustomCodeBlock } from "./extensions/CustomCodeBlock";
 import { HeadingWithId } from "./extensions/HeadingWithId";

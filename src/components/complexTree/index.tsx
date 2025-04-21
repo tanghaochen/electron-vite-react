@@ -409,6 +409,68 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
       </li>
     );
   };
+
+  const renderRenameInput = ({
+    item,
+    inputProps,
+    inputRef,
+    submitButtonProps,
+    submitButtonRef,
+    formProps,
+  }) => {
+    const handleBlur = async (e) => {
+      try {
+        const newName = e.target.value.trim();
+        if (newName === "") {
+          console.warn("标签名不能为空");
+          return;
+        }
+
+        const itemId = dataProvider.newItemID || item.index;
+
+        // 更新数据库
+        await tagsdb.updateTag(itemId, {
+          label: newName,
+        });
+
+        // 更新本地数据
+        dataProvider.data[itemId].label = newName;
+
+        // 如果是新建的item，重置newItemID
+        if (dataProvider.newItemID) {
+          dataProvider.newItemID = null;
+        }
+
+        // 触发视图更新
+        dataProvider.emitChange([itemId]);
+
+        // 触发原有的blur事件
+        if (inputProps.onBlur) {
+          inputProps.onBlur(e);
+        }
+      } catch (error) {
+        console.error("标签重命名失败:", error);
+      }
+    };
+
+    return (
+      <form {...formProps} className="w-full">
+        <input
+          {...inputProps}
+          ref={inputRef}
+          onBlur={handleBlur}
+          className="w-full bg-transparent outline-none border-none text-base text-zinc-800"
+          autoFocus
+        />
+        <button
+          {...submitButtonProps}
+          ref={submitButtonRef}
+          className="hidden"
+        />
+      </form>
+    );
+  };
+
   return (
     <div className="w-full h-full bg-stone-50">
       <div className="content-center flex gap-2 py-2 text-zinc-500 justify-between px-2">
@@ -449,6 +511,8 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
               selectedItems,
             },
           }}
+          renderRenameInput={renderRenameInput}
+          canRename={true}
           onFocusItem={(item) => setFocusedItem(item.index)}
           onCollapseItem={(item) =>
             setExpandedItems(
@@ -466,7 +530,7 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
           }}
           renderItemTitle={(item) => (
             <span
-              className="w-full h-full content-center text-base text-zinc-800"
+              className="w-full h-full content-center text-base text-zinc-800 truncate"
               onContextMenu={(e) => handleContextMenu(e, item)}
             >
               {item.title || "未命名标签"}

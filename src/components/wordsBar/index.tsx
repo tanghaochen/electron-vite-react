@@ -237,11 +237,11 @@ export default function WorksBar({
     }
   };
   return (
-    <div>
-      <div className="flex items-center mx-4 justify-between">
-        <div className="content-center flex gap-2 py-2 text-zinc-500">
-          <SellIcon />
-          {worksListTitle || "未命名标签"}
+    <div className="w-full">
+      <div className="flex items-center justify-between mx-4 w-[calc(100%-32px)]">
+        <div className="flex gap-2 py-2 text-zinc-500 flex-1 min-w-0">
+          <SellIcon className="flex-shrink-0" />
+          <span className="truncate">{worksListTitle || "未命名标签"}</span>
         </div>
         <Button
           color="#000000"
@@ -249,7 +249,7 @@ export default function WorksBar({
           style={{
             backgroundColor: "#F5F5F5",
           }}
-          className="size-8 my-auto"
+          className="flex-shrink-0 size-8 my-auto"
           onClick={handleAddWorksBtn}
         >
           <AddIcon fontSize="small" />
