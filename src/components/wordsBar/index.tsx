@@ -18,6 +18,13 @@ import { Divide } from "lucide-react";
 import { worksListDB } from "@/database/worksLists";
 import Button from "@mui/material/Button";
 
+interface WorksListItem {
+  id: number;
+  title: string;
+  sort_order: number;
+  tags_id: number;
+}
+
 function SortableItem({
   index,
   item,
@@ -86,6 +93,12 @@ export default function WorksBar({
   setWorksItem,
   worksList,
   setWorksList,
+}: {
+  selectedTagItem: any;
+  worksItem: any;
+  setWorksItem: (item: any) => void;
+  worksList: WorksListItem[];
+  setWorksList: (list: WorksListItem[]) => void;
 }) {
   // const [items, setItems] = useState(['Item 333333333333333333333333331', 'Item 2', 'Item 3', 'Item 4']);
   // 词库列表的的分类标签标题
@@ -100,9 +113,14 @@ export default function WorksBar({
       try {
         const worksListRes =
           (await worksListDB.getMetadataByTagId(selectedTagItem.index)) || [];
-        console.log("worksListRes", worksListRes);
-        setWorksList((item) => {
-          return item.concat(worksListRes);
+        // 按照 sort_order 排序
+        const sortedList = worksListRes.sort(
+          (a: WorksListItem, b: WorksListItem) =>
+            (a.sort_order || 0) - (b.sort_order || 0),
+        );
+        console.log("worksListRes", sortedList);
+        setWorksList((prevList: WorksListItem[]) => {
+          return prevList.concat(sortedList);
         });
       } catch (error) {
         console.error("数据获取失败:", error);
@@ -138,19 +156,23 @@ export default function WorksBar({
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      setWorksList((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
+      setWorksList((items: WorksListItem[]) => {
+        const oldIndex = items.findIndex(
+          (item: WorksListItem) => item.id === active.id,
+        );
+        const newIndex = items.findIndex(
+          (item: WorksListItem) => item.id === over.id,
+        );
 
         // 获取新数组
         const newItems = arrayMove(items, oldIndex, newIndex);
 
         // 更新数据库排序
-        newItems.forEach((item, index) => {
+        newItems.forEach((item: WorksListItem, index: number) => {
           worksListDB.updateMetadata(item.id, { sort_order: index });
         });
 
-        return newItems.map((item, index) => ({
+        return newItems.map((item: WorksListItem, index: number) => ({
           ...item,
           sort_order: index,
         }));
