@@ -100,6 +100,7 @@ export default function WorksBar({
       try {
         const worksListRes =
           (await worksListDB.getMetadataByTagId(selectedTagItem.index)) || [];
+        console.log("worksListRes", worksListRes);
         setWorksList((item) => {
           return item.concat(worksListRes);
         });
@@ -301,6 +302,7 @@ export default function WorksBar({
                 const targetEle = e.nativeEvent.target.closest("li");
                 if (targetEle.tagName !== "LI") return;
                 const worksID = targetEle.getAttribute("worksid");
+                console.log("worksID", worksID);
                 const worksItem = worksList.find((item) => item.id == worksID);
                 setWorksItem(worksItem); // NOTE 设置当前选中的词库
                 console.log("worksItem", worksItem);

@@ -29,6 +29,7 @@ import { Breadcrumbs, Typography, Chip, IconButton, Box } from "@mui/material";
 // 富文本组件
 import RichTextEditor from "@/components/richNote";
 import "@/components/richNote/styles/index.scss";
+import { tagsdb } from "@/database/tagsDB";
 
 interface HighlightProps {
   textContent: string;
@@ -79,6 +80,7 @@ const TextHighlighter = ({ textContent, items = [] }: HighlightProps) => {
   const [activeKeyword, setActiveKeyword] = useState<string | null>(null);
 
   const sortedItems = useMemo(() => {
+    console.log("sortedItems", items);
     return [...items].sort((a, b) => b.title.length - a.title.length);
   }, [items]);
 
@@ -159,6 +161,17 @@ const TextHighlighter = ({ textContent, items = [] }: HighlightProps) => {
   useEffect(() => {
     highlightAll();
   }, [textContent, items, highlightAll]);
+
+  useEffect(() => {
+    console.log(
+      "所有需要高亮的词语:",
+      sortedItems.map((item) => ({
+        id: item.id,
+        title: item.title,
+      })),
+    );
+    console.log("找到的关键词:", foundKeywords);
+  }, [sortedItems, foundKeywords]);
 
   // 处理点击关键词的函数
   const handleChipClick = async (keyword: string) => {
@@ -327,10 +340,30 @@ const App = () => {
     setCustomClipBoardContent(cleanText);
   }, []);
 
+  // 获取词库列表
   const getWorksList = async () => {
-    const res = await worksListDB.getMetadataByTagId(1);
-    setHighlightedKeywords(res);
-    return res;
+    try {
+      // 1. 先获取category_id为1的所有标签
+      const tags = await tagsdb.getTagsByCategory(1);
+
+      // 2. 初始化结果数组
+      let allMetadata = [];
+
+      // 3. 对每个标签查询对应的metadata
+      for (const tag of tags) {
+        const metadata = await worksListDB.getMetadataByTagId(tag.id);
+        if (metadata && metadata.length > 0) {
+          allMetadata = allMetadata.concat(metadata);
+        }
+      }
+
+      console.log("获取词库列表", allMetadata);
+      setHighlightedKeywords(allMetadata);
+      return allMetadata;
+    } catch (error) {
+      console.error("获取词库列表失败:", error);
+      return [];
+    }
   };
 
   useEffect(() => {

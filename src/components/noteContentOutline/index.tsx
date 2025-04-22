@@ -167,52 +167,48 @@ export default function BasicTabs({
 
   return (
     <div className="flex-1 relative overflow-hidden">
-      {isLoading ? (
-        <div>加载中...</div>
-      ) : (
-        <Tabs
-          selectedIndex={selectedIndex}
-          onSelect={(index) => setSelectedIndex(index)}
-          forceRenderTabPanel
-        >
-          <TabList>
-            {tabs.map((tab) => (
-              <Tab key={tab.value}>
-                <div className="custom-tab-content">
-                  <span>{tab.label || "未命名"}</span>
-                  <IconButton
-                    size="small"
-                    onClick={(e) => handleCloseTab(tab.value, e)}
-                    sx={{
-                      p: 0,
-                      ml: 1,
-                      "&:hover": { backgroundColor: "rgba(0,0,0,0.08)" },
-                    }}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </div>
-              </Tab>
-            ))}
-          </TabList>
+      <Tabs
+        selectedIndex={selectedIndex}
+        onSelect={(index) => setSelectedIndex(index)}
+        forceRenderTabPanel
+      >
+        <TabList>
+          {tabs.map((tab) => (
+            <Tab key={tab.value}>
+              <div className="custom-tab-content">
+                <span>{tab.label || "未命名"}</span>
+                <IconButton
+                  size="small"
+                  onClick={(e) => handleCloseTab(tab.value, e)}
+                  sx={{
+                    p: 0,
+                    ml: 1,
+                    "&:hover": { backgroundColor: "rgba(0,0,0,0.08)" },
+                  }}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </div>
+            </Tab>
+          ))}
+        </TabList>
 
-          <div className={"w-auto"}>
-            {tabs.map((tab) => (
-              <TabPanel key={tab.value}>
-                <RichNote
-                  activeTabsItem={activeTabsItem}
-                  tabItem={tab}
-                  setTabs={setTabs}
-                  setActiveTabsItem={setActiveTabsItem}
-                  setWorksList={setWorksList}
-                  setCurrentEditor={setCurrentEditor}
-                  setActiveRichTextEditor={setActiveRichTextEditor}
-                />
-              </TabPanel>
-            ))}
-          </div>
-        </Tabs>
-      )}
+        <div className={"w-auto"}>
+          {tabs.map((tab) => (
+            <TabPanel key={tab.value}>
+              <RichNote
+                activeTabsItem={activeTabsItem}
+                tabItem={tab}
+                setTabs={setTabs}
+                setActiveTabsItem={setActiveTabsItem}
+                setWorksList={setWorksList}
+                setCurrentEditor={setCurrentEditor}
+                setActiveRichTextEditor={setActiveRichTextEditor}
+              />
+            </TabPanel>
+          ))}
+        </div>
+      </Tabs>
     </div>
   );
 }
