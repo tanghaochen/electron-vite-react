@@ -13,6 +13,10 @@ import { app } from "electron";
 import Database from "better-sqlite3";
 import fs from "fs";
 import { migrations } from "./migrations/index";
+import crypto from "crypto";
+import { createGzip } from "zlib";
+import { pipeline } from "stream/promises";
+
 // 确保testdata目录存在
 // 这个目录用于存储数据库文件
 const testDataPath = path.resolve("testdata");
@@ -20,11 +24,189 @@ if (!fs.existsSync(testDataPath)) {
   fs.mkdirSync(testDataPath, { recursive: true });
 }
 
+// 确保backups目录存在
+const backupPath = path.join(testDataPath, "backups");
+if (!fs.existsSync(backupPath)) {
+  fs.mkdirSync(backupPath, { recursive: true });
+}
+
+// 备份配置
+const BACKUP_CONFIG = {
+  maxBackups: 30, // 保留30天的备份
+  encryptionKey:
+    process.env.DB_BACKUP_KEY || crypto.randomBytes(32).toString("hex"),
+  compressionLevel: 9, // 最高压缩级别
+  backupInterval: 24 * 60 * 60 * 1000, // 24小时
+  integrityCheck: true, // 启用完整性检查
+};
+
 // 定义数据库文件路径
 const dbPath = path.join(testDataPath, "notes.db");
 
 // 全局数据库实例变量
 let dbInstance: Database.Database | null = null;
+
+/**
+ * 创建加密的数据库备份
+ * @param {string} backupName - 备份文件名（可选）
+ * @returns {Promise<string>} 备份文件路径
+ */
+export async function createBackup(backupName?: string): Promise<string> {
+  if (!dbInstance) {
+    throw new Error("数据库未初始化");
+  }
+
+  // 确保数据库已保存所有更改
+  dbInstance.prepare("PRAGMA wal_checkpoint(FULL)").run();
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const backupFileName = backupName
+    ? `${backupName}.db.gz.enc`
+    : `backup-${timestamp}.db.gz.enc`;
+
+  const backupFilePath = path.join(backupPath, backupFileName);
+
+  // 创建加密和压缩流
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv(
+    "aes-256-gcm",
+    Buffer.from(BACKUP_CONFIG.encryptionKey, "hex"),
+    iv,
+  );
+  const gzip = createGzip({ level: BACKUP_CONFIG.compressionLevel });
+
+  // 写入IV到文件头部
+  await fs.promises.writeFile(backupFilePath, iv);
+
+  // 创建备份流
+  const readStream = fs.createReadStream(dbPath);
+  const writeStream = fs.createWriteStream(backupFilePath, { flags: "a" });
+
+  // 执行加密和压缩
+  await pipeline(readStream, gzip, cipher, writeStream);
+
+  // 验证备份完整性
+  if (BACKUP_CONFIG.integrityCheck) {
+    await verifyBackupIntegrity(backupFilePath);
+  }
+
+  console.log(`数据库备份已创建: ${backupFilePath}`);
+  return backupFilePath;
+}
+
+/**
+ * 验证备份文件完整性
+ * @param {string} backupFilePath - 备份文件路径
+ */
+async function verifyBackupIntegrity(backupFilePath: string): Promise<void> {
+  try {
+    const iv = await fs.promises.readFile(backupFilePath, { length: 16 });
+    const decipher = crypto.createDecipheriv(
+      "aes-256-gcm",
+      Buffer.from(BACKUP_CONFIG.encryptionKey, "hex"),
+      iv,
+    );
+    const gzip = createGzip();
+
+    const tempPath = backupFilePath + ".temp";
+    const readStream = fs.createReadStream(backupFilePath, { start: 16 });
+    const writeStream = fs.createWriteStream(tempPath);
+
+    await pipeline(readStream, decipher, gzip, writeStream);
+
+    // 验证SQLite数据库完整性
+    const tempDb = new Database(tempPath);
+    const integrityCheck = tempDb
+      .prepare("PRAGMA integrity_check")
+      .pluck()
+      .get();
+    tempDb.close();
+
+    if (integrityCheck !== "ok") {
+      throw new Error(`备份完整性检查失败: ${integrityCheck}`);
+    }
+
+    await fs.promises.unlink(tempPath);
+  } catch (error) {
+    console.error("备份验证失败:", error);
+    throw error;
+  }
+}
+
+/**
+ * 从加密备份恢复数据库
+ * @param {string} backupFilePath - 备份文件路径
+ */
+export async function restoreFromBackup(backupFilePath: string): Promise<void> {
+  if (!fs.existsSync(backupFilePath)) {
+    throw new Error(`备份文件不存在: ${backupFilePath}`);
+  }
+
+  // 关闭当前数据库连接
+  if (dbInstance) {
+    dbInstance.close();
+    dbInstance = null;
+  }
+
+  // 读取IV
+  const iv = await fs.promises.readFile(backupFilePath, { length: 16 });
+  const decipher = crypto.createDecipheriv(
+    "aes-256-gcm",
+    Buffer.from(BACKUP_CONFIG.encryptionKey, "hex"),
+    iv,
+  );
+  const gzip = createGzip();
+
+  // 创建临时文件
+  const tempPath = dbPath + ".temp";
+  const readStream = fs.createReadStream(backupFilePath, { start: 16 });
+  const writeStream = fs.createWriteStream(tempPath);
+
+  // 解密和解压
+  await pipeline(readStream, decipher, gzip, writeStream);
+
+  // 验证恢复的数据库完整性
+  const tempDb = new Database(tempPath);
+  const integrityCheck = tempDb.prepare("PRAGMA integrity_check").pluck().get();
+  tempDb.close();
+
+  if (integrityCheck !== "ok") {
+    throw new Error(`恢复的数据库完整性检查失败: ${integrityCheck}`);
+  }
+
+  // 替换原数据库文件
+  await fs.promises.rename(tempPath, dbPath);
+
+  console.log(`数据库已从备份恢复: ${backupFilePath}`);
+
+  // 重新初始化数据库
+  initDatabase();
+}
+
+/**
+ * 清理旧备份
+ * @param {number} maxBackups - 保留的最大备份数量
+ */
+export function cleanupOldBackups(
+  maxBackups: number = BACKUP_CONFIG.maxBackups,
+): void {
+  const backups = fs
+    .readdirSync(backupPath)
+    .filter((file) => file.endsWith(".db.gz.enc"))
+    .map((file) => ({
+      name: file,
+      path: path.join(backupPath, file),
+      time: fs.statSync(path.join(backupPath, file)).mtime.getTime(),
+    }))
+    .sort((a, b) => b.time - a.time);
+
+  if (backups.length > maxBackups) {
+    backups.slice(maxBackups).forEach((backup) => {
+      fs.unlinkSync(backup.path);
+      console.log(`已删除旧备份: ${backup.name}`);
+    });
+  }
+}
 
 /**
  * 初始化数据库
@@ -56,6 +238,20 @@ export function initDatabase() {
 
     // 验证表结构
     verifyTables();
+
+    // 创建初始备份
+    createBackup("initial-backup").catch((err) => {
+      console.error("初始备份创建失败:", err);
+    });
+
+    // 设置自动备份（每天一次）
+    setInterval(() => {
+      createBackup()
+        .then(() => cleanupOldBackups())
+        .catch((err) => {
+          console.error("自动备份失败:", err);
+        });
+    }, BACKUP_CONFIG.backupInterval);
 
     return dbInstance;
   } catch (err) {
