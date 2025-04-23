@@ -270,10 +270,18 @@ const TextHighlighter = ({ textContent, items = [] }: HighlightProps) => {
               <div>笔记内容</div>
             </div>
             {/* <div dangerouslySetInnerHTML={{ __html: noteContent }}></div> */}
-            <RichTextEditor
-              tabItem={{ content: noteContent, value: activeNoteId }}
-              isShowHeading={false}
-            />
+            {/* 如果没有高亮，富文本不显示， 提供没有找到 */}
+            {foundKeywords.length > 0 ? (
+              <RichTextEditor
+                tabItem={{ content: noteContent, value: activeNoteId }}
+                isShowHeading={false}
+              />
+            ) : (
+              // 没有找到
+              <div className="w-full h-full flex items-center justify-center">
+                <div>没有找到相关内容</div>
+              </div>
+            )}
           </div>
         </Panel>
       </PanelGroup>
@@ -449,6 +457,7 @@ const App = () => {
         </Box>
       </ControlBar>
 
+      {/* 高亮组件 */}
       <TextHighlighter
         textContent={customClipBoardContent}
         items={highlightedKeywords}
