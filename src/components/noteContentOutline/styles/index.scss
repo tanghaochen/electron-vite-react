@@ -2,7 +2,7 @@
   opacity: 0;
   transition: opacity 0.2s ease;
   &:hover {
-    background-color: rgba(0,0,0,0.08) !important;
+    background-color: rgba(0, 0, 0, 0.08) !important;
   }
 }
 
@@ -17,6 +17,16 @@
 .drag-overlay {
   .MuiTab-root {
     transform-origin: center center;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
   }
+}
+
+.react-tabs__tab--selected {
+  border: none;
+}
+
+.react-tabs__tab {
+  border-right: 1px solid #e0e0e0;
+  border-top: 1px solid #e0e0e0;
+  overflow: hidden;
 }

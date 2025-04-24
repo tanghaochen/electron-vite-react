@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
 import "react-tabs/style/react-tabs.css";
+import "./styles/index.scss";
 import RichNote from "../richNote";
 import { useEffect, useState } from "react";
 import { worksListDB } from "@/database/worksLists";
@@ -10,6 +11,22 @@ import CloseIcon from "@mui/icons-material/Close";
 import { preferencesDB } from "@/database/perferencesDB";
 import ReactDOM from "react-dom";
 
+interface TabItem {
+  id: string;
+  label: string;
+  value: string;
+  content: string;
+}
+
+interface BasicTabsProps {
+  worksItem: any;
+  setWorksItem: (item: any) => void;
+  setWorksList: (list: any[]) => void;
+  setCurrentEditor: (editor: any) => void;
+  setCurrentTab: (tab: any) => void;
+  setActiveRichTextEditor: (editor: any) => void;
+}
+
 export default function BasicTabs({
   worksItem,
   setWorksItem,
@@ -17,14 +34,17 @@ export default function BasicTabs({
   setCurrentEditor,
   setCurrentTab,
   setActiveRichTextEditor,
-}) {
-  // 打开的tab数组
-  const [tabs, setTabs] = React.useState([]);
-  // 当前选中的tab的index, 从0开始, 显示打开第几个tab
+}: BasicTabsProps) {
+  const [tabs, setTabs] = React.useState<TabItem[]>([]);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
-  // 当前选中的tab
-  const [activeTabsItem, setActiveTabsItem] = React.useState({});
+  const [activeTabsItem, setActiveTabsItem] = React.useState<TabItem | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [dragOverPosition, setDragOverPosition] = useState<
+    "left" | "right" | null
+  >(null);
 
   // 同步当前选中标签
   useEffect(() => {
@@ -165,6 +185,44 @@ export default function BasicTabs({
     console.log("ActiveTabsItem changed:", activeTabsItem);
   }, [activeTabsItem]);
 
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData("text/plain", index.toString());
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const isLeft = x < rect.width / 2;
+
+    setDragOverIndex(index);
+    setDragOverPosition(isLeft ? "left" : "right");
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+    setDragOverPosition(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    const dragIndex = parseInt(e.dataTransfer.getData("text/plain"));
+
+    if (dragIndex !== dropIndex) {
+      const newTabs = [...tabs];
+      const [draggedItem] = newTabs.splice(dragIndex, 1);
+
+      const insertIndex =
+        dragOverPosition === "left" ? dropIndex : dropIndex + 1;
+      newTabs.splice(insertIndex, 0, draggedItem);
+
+      setTabs(newTabs);
+    }
+
+    setDragOverIndex(null);
+    setDragOverPosition(null);
+  };
+
   return (
     <div className="flex-1 relative overflow-hidden">
       <Tabs
@@ -172,22 +230,41 @@ export default function BasicTabs({
         onSelect={(index) => setSelectedIndex(index)}
         forceRenderTabPanel
       >
-        <TabList>
-          {tabs.map((tab) => (
+        <TabList className="flex flex-wrap m-0 p-0 bg-gray-100">
+          {tabs.map((tab, index) => (
             <Tab key={tab.value}>
-              <div className="custom-tab-content">
-                <span>{tab.label || "未命名"}</span>
-                <IconButton
-                  size="small"
-                  onClick={(e) => handleCloseTab(tab.value, e)}
-                  sx={{
-                    p: 0,
-                    ml: 1,
-                    "&:hover": { backgroundColor: "rgba(0,0,0,0.08)" },
-                  }}
+              {dragOverIndex === index && (
+                <div
+                  className={`absolute top-0 h-full w-1 bg-blue-500 z-10 ${
+                    dragOverPosition === "left" ? "left-[-1px]" : "right-[-1px]"
+                  }`}
+                />
+              )}
+              <div className="relative flex">
+                <div
+                  className="custom-tab-content"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, index)}
                 >
-                  <CloseIcon fontSize="small" />
-                </IconButton>
+                  <span>{tab.label || "未命名"}</span>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCloseTab(tab.value, e);
+                    }}
+                    sx={{
+                      p: 0,
+                      ml: 1,
+                      "&:hover": { backgroundColor: "rgba(0,0,0,0.08)" },
+                    }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </div>
               </div>
             </Tab>
           ))}
