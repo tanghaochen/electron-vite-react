@@ -8,6 +8,7 @@ import AddIcon from "@mui/icons-material/Add";
 import SellIcon from "@mui/icons-material/Sell";
 import { worksListDB } from "@/database/worksLists";
 import Button from "@mui/material/Button";
+import { worksStateManager } from "@/utils/worksStateManager";
 
 interface WorksListItem {
   id: number;
@@ -95,23 +96,19 @@ export default function WorksBar({
   const previewLineRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setWorksList([]);
-    setWorksListTitle(selectedTagItem?.label || "未命名");
-    const fetchData = async () => {
-      if (!selectedTagItem) return;
-      try {
-        const worksListRes =
-          (await worksListDB.getMetadataByTagId(selectedTagItem.index)) || [];
-        const sortedList = worksListRes.sort(
-          (a: WorksListItem, b: WorksListItem) =>
-            (a.sort_order || 0) - (b.sort_order || 0),
-        );
-        setWorksList(sortedList);
-      } catch (error) {
-        console.error("数据获取失败:", error);
-      }
+    // 添加状态监听器
+    const unsubscribe = worksStateManager.addListener((newWorksList) => {
+      setWorksList(newWorksList);
+    });
+
+    // 初始加载数据
+    if (selectedTagItem?.index) {
+      worksStateManager.updateWorksList(selectedTagItem.index);
+    }
+
+    return () => {
+      unsubscribe();
     };
-    fetchData();
   }, [selectedTagItem?.index]);
 
   const handleDragStart = (

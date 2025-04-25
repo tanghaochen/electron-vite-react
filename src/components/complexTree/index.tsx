@@ -16,6 +16,7 @@ import AddIcon from "@mui/icons-material/Add";
 import { worksListDB } from "@/database/worksLists";
 import { preferencesDB } from "@/database/perferencesDB";
 import ReactDOM from "react-dom";
+import { worksStateManager } from "@/utils/worksStateManager";
 
 import Button from "@mui/material/Button";
 
@@ -417,6 +418,9 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
         if (setWorksItem) {
           setWorksItem(null); // 清空当前选中的词库
         }
+
+        // 从状态管理器中移除被拖拽的项目
+        worksStateManager.removeWorksItem(dragData.data.id);
         return;
       }
     } catch (error) {
