@@ -1,12 +1,4 @@
-import { DndContext, MouseSensor, useSensor, useSensors } from "@dnd-kit/core";
-import {
-  rectSortingStrategy,
-  SortableContext,
-  useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { useEffect, useState } from "react";
-import { restrictToParentElement } from "@dnd-kit/modifiers";
+import { useEffect, useState, useRef } from "react";
 import "./style.scss";
 import { IconButton } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -14,7 +6,6 @@ import * as React from "react";
 import MaterialIcon from "@/components/materialIcon";
 import AddIcon from "@mui/icons-material/Add";
 import SellIcon from "@mui/icons-material/Sell";
-import { Divide } from "lucide-react";
 import { worksListDB } from "@/database/worksLists";
 import Button from "@mui/material/Button";
 
@@ -25,27 +16,23 @@ interface WorksListItem {
   tags_id: number;
 }
 
-function SortableItem({
-  index,
+function WorksBarItem({
   item,
   onAdd,
   onDelete,
   worksItem,
+  onDragStart,
+  onDragOver,
+  onDrop,
 }: {
-  index: number;
-  item: any;
-  onAdd: any;
-  onDelete: any;
-  worksItem: any;
+  item: WorksListItem;
+  onAdd: (item: WorksListItem) => void;
+  onDelete: (id: number) => void;
+  worksItem: WorksListItem | null;
+  onDragStart: (e: React.DragEvent<HTMLLIElement>, item: WorksListItem) => void;
+  onDragOver: (e: React.DragEvent<HTMLLIElement>, item: WorksListItem) => void;
+  onDrop: (e: React.DragEvent<HTMLLIElement>, item: WorksListItem) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: item.id, index });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
   const handleAddWorskNote = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     onAdd(item);
@@ -58,17 +45,16 @@ function SortableItem({
     }
   };
 
-  // 组件结构优化
   return (
     <li
-      ref={setNodeRef}
-      style={style}
-      worksid={item.id}
-      {...attributes}
-      {...listeners}
+      draggable
+      data-id={item.id}
+      onDragStart={(e) => onDragStart(e, item)}
+      onDragOver={(e) => onDragOver(e, item)}
+      onDrop={(e) => onDrop(e, item)}
       className={`worksBarItem ${
         !!worksItem && worksItem?.id === item.id ? "worksBarItem_active" : ""
-      }`} // 移除非必要 class
+      }`}
     >
       <span className="truncate">{item.title || "未命名"}</span>
       <div className="optionBtn">
@@ -95,33 +81,32 @@ export default function WorksBar({
   setWorksList,
 }: {
   selectedTagItem: any;
-  worksItem: any;
-  setWorksItem: (item: any) => void;
+  worksItem: WorksListItem | null;
+  setWorksItem: (item: WorksListItem) => void;
   worksList: WorksListItem[];
   setWorksList: (list: WorksListItem[]) => void;
 }) {
-  // const [items, setItems] = useState(['Item 333333333333333333333333331', 'Item 2', 'Item 3', 'Item 4']);
-  // 词库列表的的分类标签标题
   const [worksListTitle, setWorksListTitle] = useState("未命名");
+  const [draggedItem, setDraggedItem] = useState<WorksListItem | null>(null);
+  const [dropPosition, setDropPosition] = useState<{
+    id: number;
+    position: "before" | "after";
+  } | null>(null);
+  const previewLineRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setWorksList([]);
     setWorksListTitle(selectedTagItem?.label || "未命名");
-    // 获取词库列表
     const fetchData = async () => {
       if (!selectedTagItem) return;
       try {
         const worksListRes =
           (await worksListDB.getMetadataByTagId(selectedTagItem.index)) || [];
-        // 按照 sort_order 排序
         const sortedList = worksListRes.sort(
           (a: WorksListItem, b: WorksListItem) =>
             (a.sort_order || 0) - (b.sort_order || 0),
         );
-        console.log("worksListRes", sortedList);
-        setWorksList((prevList: WorksListItem[]) => {
-          return prevList.concat(sortedList);
-        });
+        setWorksList(sortedList);
       } catch (error) {
         console.error("数据获取失败:", error);
       }
@@ -129,88 +114,134 @@ export default function WorksBar({
     fetchData();
   }, [selectedTagItem?.index]);
 
-  // useEffect(() => {
-  //     console.log('selectedTagItem?.title111111111', worksList, worksItem)
-  //     if(!worksItem?.title) return
-  //     // 更改对应某个数据的title
-  //     setWorksList((item) => {
-  //         return item.map((item) => {
-  //             if(item.id == worksItem.id){
-  //                 item.title = worksItem.title
-  //             }
-  //             return item
-  //         })
-  //     })
-  // }, [worksItem?.title]);
+  const handleDragStart = (
+    e: React.DragEvent<HTMLLIElement>,
+    item: WorksListItem,
+  ) => {
+    setDraggedItem(item);
+    setTimeout(() => {
+      e.dataTransfer.effectAllowed = "move";
+    }, 0);
+    e.dataTransfer.setData("text/plain", item.id.toString());
+  };
 
-  //拖拽传感器，在移动像素5px范围内，不触发拖拽事件
-  const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: {
-        distance: 5,
-      },
-    }),
-  );
+  const handleDragOver = (
+    e: React.DragEvent<HTMLLIElement>,
+    item: WorksListItem,
+  ) => {
+    e.preventDefault();
+    if (!draggedItem || draggedItem.id === item.id) {
+      if (previewLineRef.current) {
+        previewLineRef.current.style.display = "none";
+      }
+      return;
+    }
 
-  function handleDragEnd(event) {
-    const { active, over } = event;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const listRect = e.currentTarget.closest("ul")?.getBoundingClientRect();
+    if (!listRect) return;
 
-    if (over && active.id !== over.id) {
-      setWorksList((items: WorksListItem[]) => {
-        const oldIndex = items.findIndex(
-          (item: WorksListItem) => item.id === active.id,
-        );
-        const newIndex = items.findIndex(
-          (item: WorksListItem) => item.id === over.id,
-        );
+    const mouseY = e.clientY;
+    const itemMiddle = rect.top + rect.height / 2;
+    const position = mouseY < itemMiddle ? "before" : "after";
 
-        // 获取新数组
-        const newItems = arrayMove(items, oldIndex, newIndex);
+    setDropPosition({ id: item.id, position });
 
-        // 更新数据库排序
-        newItems.forEach((item: WorksListItem, index: number) => {
-          worksListDB.updateMetadata(item.id, { sort_order: index });
-        });
+    // 更新预览线位置
+    if (previewLineRef.current) {
+      previewLineRef.current.style.display = "block";
+      // 计算相对于列表容器的位置
+      const relativeTop = rect.top - listRect.top;
+      const relativeBottom = rect.bottom - listRect.top;
 
-        return newItems.map((item: WorksListItem, index: number) => ({
-          ...item,
-          sort_order: index,
-        }));
+      if (worksList[0].id === item.id && position === "before") {
+        previewLineRef.current.style.top = "0px";
+      } else {
+        previewLineRef.current.style.top =
+          position === "before" ? `${relativeTop}px` : `${relativeBottom}px`;
+      }
+    }
+  };
+
+  const handleDrop = async (
+    e: React.DragEvent<HTMLLIElement>,
+    targetItem: WorksListItem,
+  ) => {
+    e.preventDefault();
+    if (!draggedItem || !dropPosition || draggedItem.id === targetItem.id)
+      return;
+
+    const oldIndex = worksList.findIndex((item) => item.id === draggedItem.id);
+    const targetIndex = worksList.findIndex(
+      (item) => item.id === targetItem.id,
+    );
+    let newIndex =
+      dropPosition.position === "before" ? targetIndex : targetIndex + 1;
+
+    // 处理拖拽到第一个元素的情况
+    if (targetIndex === 0 && dropPosition.position === "before") {
+      newIndex = 0;
+    }
+
+    if (oldIndex === newIndex) return;
+
+    const newItems = arrayMove(worksList, oldIndex, newIndex);
+    const updatedItems = newItems.map((item, index) => ({
+      ...item,
+      sort_order: index,
+    }));
+
+    // 更新数据库
+    for (const item of updatedItems) {
+      await worksListDB.updateMetadata(item.id, {
+        sort_order: item.sort_order,
       });
     }
-  }
 
-  const handleAddWorksBtn = async (e) => {
+    setWorksList(updatedItems);
+    setDraggedItem(null);
+    setDropPosition(null);
+    if (previewLineRef.current) {
+      previewLineRef.current.style.display = "none";
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+    setDropPosition(null);
+    if (previewLineRef.current) {
+      previewLineRef.current.style.display = "none";
+    }
+  };
+
+  const handleAddWorksBtn = async (e: React.MouseEvent<HTMLButtonElement>) => {
     try {
       if (!selectedTagItem?.index) {
         throw new Error("未选择有效标签");
       }
-      console.log("selectedTagItem", selectedTagItem);
-      const newItem = await worksListDB.createMetadata({
+      const newItem = (await worksListDB.createMetadata({
         tags_id: selectedTagItem.index,
         title: "", // 添加默认标题
         sort_order: worksList.length, // 自动生成排序序号
-      });
-
-      console.log("新建结果:", newItem);
+      })) as WorksListItem;
 
       // 更新状态（带完整数据）
-      setWorksList((prev) => [
-        ...prev,
+      setWorksList([
+        ...worksList,
         {
           id: newItem.id,
-          title: newItem.title,
+          title: newItem.title || "",
           tags_id: newItem.tags_id,
-          sort_order: newItem.index,
+          sort_order: worksList.length,
         },
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("创建失败:", error);
       alert(`创建失败: ${error.message}`);
     }
   };
 
-  const handleAddWorksNote = async (parentItem) => {
+  const handleAddWorksNote = async (parentItem: WorksListItem) => {
     try {
       // 获取插入位置
       const parentIndex = worksList.findIndex(
@@ -219,12 +250,12 @@ export default function WorksBar({
       const insertPosition = parentIndex + 1;
 
       // 创建新条目
-      const newItem = await worksListDB.createMetadata({
+      const newItem = (await worksListDB.createMetadata({
         tags_id: selectedTagItem?.index,
         parent_id: parentItem?.id || 0,
         title: "未命名",
         sort_order: insertPosition,
-      });
+      })) as WorksListItem;
 
       // 更新后续条目的排序值
       const updatedList = worksList.map((item) => {
@@ -236,7 +267,9 @@ export default function WorksBar({
 
       // 插入新条目
       updatedList.splice(insertPosition, 0, {
-        ...newItem,
+        id: newItem.id,
+        title: newItem.title || "未命名",
+        tags_id: newItem.tags_id,
         sort_order: insertPosition,
       });
 
@@ -251,14 +284,15 @@ export default function WorksBar({
     }
   };
 
-  const handleDeleteWorksNote = async (itemId) => {
+  const handleDeleteWorksNote = async (itemId: number) => {
     try {
       await worksListDB.deleteMetadata(itemId);
-      setWorksList((prev) => prev.filter((item) => item.id !== itemId));
+      setWorksList(worksList.filter((item) => item.id !== itemId));
     } catch (error) {
       console.error("删除失败:", error);
     }
   };
+
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mx-4 w-[calc(100%-32px)]">
@@ -267,10 +301,11 @@ export default function WorksBar({
           <span className="truncate">{worksListTitle || "未命名标签"}</span>
         </div>
         <Button
-          color="#000000"
+          variant="contained"
           size="small"
           style={{
             backgroundColor: "#F5F5F5",
+            color: "#000000",
           }}
           className="flex-shrink-0 size-8 my-auto"
           onClick={handleAddWorksBtn}
@@ -279,7 +314,7 @@ export default function WorksBar({
         </Button>
       </div>
       <div
-        className="flex flex-col  gap-4 justify-center"
+        className="flex flex-col gap-4 justify-center"
         style={{
           height: "50vh",
           display: (worksList?.length && "none") || "flex",
@@ -288,70 +323,74 @@ export default function WorksBar({
       >
         <div className="flex justify-center">
           <svg
-            t="1741698415168"
             className="icon"
             viewBox="0 0 1024 1024"
             version="1.1"
             xmlns="http://www.w3.org/2000/svg"
-            p-id="1596"
             width="100"
             height="100"
           >
             <path
               d="M831.7 369.4H193.6L64 602v290.3h897.2V602L831.7 369.4zM626.6 604.6c0 62.9-51 113.9-114 113.9s-114-51-114-113.9H117.5l103.8-198h582.5l103.8 198h-281zM502.2 131h39.1v140.6h-39.1zM236.855 200.802l27.647-27.647 99.419 99.418-27.648 27.648zM667.547 272.637l99.418-99.419 27.648 27.648-99.418 99.418z"
-              p-id="1597"
               fill="#bfbfbf"
             ></path>
           </svg>
         </div>
         <div className="text-center">词库为空, 点击右上方 ＋ 号新建</div>
       </div>
-      {/*// restrictToParentElement: 限制在父容器内*/}
       {worksList?.length > 0 && (
-        <DndContext
-          onDragEnd={handleDragEnd}
-          sensors={sensors}
-          modifiers={[restrictToParentElement]}
-        >
-          <SortableContext
-            items={worksList}
-            strategy={rectSortingStrategy}
-            sensors={sensors}
+        <div className="relative">
+          <div
+            ref={previewLineRef}
+            className="absolute left-0 right-0 h-0.5 bg-blue-500 hidden"
+            style={{ pointerEvents: "none" }}
+          />
+          <ul
+            className="worksBarlist"
+            onDragEnd={handleDragEnd}
+            onDragOver={(e) => {
+              e.preventDefault();
+            }}
+            onDragEnter={(e) => {
+              e.preventDefault();
+            }}
+            onClick={(e) => {
+              const targetEle = e.target as HTMLElement;
+              const li = targetEle.closest("li");
+              if (!li) return;
+              const worksID = li.getAttribute("data-id");
+              if (!worksID) return;
+              const worksItem = worksList.find(
+                (item) => item.id === Number(worksID),
+              );
+              if (worksItem) {
+                setWorksItem(worksItem);
+              }
+            }}
           >
-            <ul
-              className="worksBarlist"
-              onClick={(e) => {
-                const targetEle = e.nativeEvent.target.closest("li");
-                if (targetEle.tagName !== "LI") return;
-                const worksID = targetEle.getAttribute("worksid");
-                console.log("worksID", worksID);
-                const worksItem = worksList.find((item) => item.id == worksID);
-                setWorksItem(worksItem); // NOTE 设置当前选中的词库
-                console.log("worksItem", worksItem);
-                // const targetBtn = e.nativeEvent.target.closest('BUTTON')
-              }}
-            >
-              {worksList.map((item, index) => {
-                return (
-                  <SortableItem
-                    index={index}
-                    item={item}
-                    worksItem={worksItem}
-                    key={item.id}
-                    onAdd={handleAddWorksNote}
-                    onDelete={handleDeleteWorksNote}
-                  />
-                );
-              })}
-            </ul>
-          </SortableContext>
-        </DndContext>
+            {worksList.map((item) => (
+              <WorksBarItem
+                key={item.id}
+                item={item}
+                worksItem={worksItem}
+                onAdd={handleAddWorksNote}
+                onDelete={handleDeleteWorksNote}
+                onDragStart={handleDragStart}
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                }}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+              />
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
 }
 
-function arrayMove(array, from, to) {
+function arrayMove<T>(array: T[], from: number, to: number): T[] {
   const newArray = array.slice();
   newArray.splice(
     to < 0 ? newArray.length + to : to,
