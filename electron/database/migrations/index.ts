@@ -5,6 +5,8 @@
  * - up: 升级函数，执行数据库结构变更
  * - down: 降级函数，用于回滚变更（可选）
  */
+import Database from "better-sqlite3";
+
 interface Migration {
   version: number;
   up: (db: Database.Database) => void;
@@ -24,12 +26,12 @@ export const migrations: Migration[] = [
       // 初始版本的表结构
       // 创建所有基础表
       db.exec(`
-        // 版本控制表，记录当前数据库版本
+        -- 版本控制表，记录当前数据库版本
         CREATE TABLE schema_version (
           version INTEGER PRIMARY KEY
         );
 
-        // 分类表，用于管理笔记分类
+        -- 分类表，用于管理笔记分类
         CREATE TABLE categories (
           id         INTEGER PRIMARY KEY AUTOINCREMENT,
           uuid       TEXT NOT NULL UNIQUE DEFAULT (LOWER(HEX(RANDOMBLOB(16)))),
@@ -41,7 +43,7 @@ export const migrations: Migration[] = [
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
 
-        // 用户偏好设置表
+        -- 用户偏好设置表
         CREATE TABLE user_preferences (
           id         INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id    TEXT NOT NULL DEFAULT '',
@@ -49,7 +51,7 @@ export const migrations: Migration[] = [
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
-        // 标签表，用于管理笔记标签
+        -- 标签表，用于管理笔记标签
         CREATE TABLE tags (
           id          INTEGER PRIMARY KEY AUTOINCREMENT,
           uuid        TEXT NOT NULL UNIQUE DEFAULT (LOWER(HEX(RANDOMBLOB(16)))),
@@ -66,7 +68,7 @@ export const migrations: Migration[] = [
           updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
         );
 
-        // 标签层级关系表，用于实现标签的树形结构
+        -- 标签层级关系表，用于实现标签的树形结构
         CREATE TABLE tag_closure (
           ancestor    INTEGER NOT NULL,
           descendant  INTEGER NOT NULL,
@@ -78,7 +80,7 @@ export const migrations: Migration[] = [
           FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
         );
 
-        // 笔记元数据表，存储笔记的基本信息
+        -- 笔记元数据表，存储笔记的基本信息
         CREATE TABLE notes_metadata (
           id         INTEGER PRIMARY KEY AUTOINCREMENT,
           tags_id    INTEGER NOT NULL DEFAULT 0,
@@ -92,7 +94,7 @@ export const migrations: Migration[] = [
           is_pinned  BOOLEAN DEFAULT 0
         );
 
-        // 笔记内容表，存储笔记的具体内容
+        -- 笔记内容表，存储笔记的具体内容
         CREATE TABLE notes_content (
           note_id    INTEGER PRIMARY KEY,
           content    TEXT NOT NULL,
@@ -100,7 +102,7 @@ export const migrations: Migration[] = [
           FOREIGN KEY (note_id) REFERENCES notes_metadata(id)
         );
 
-        // 笔记-标签关联表，实现笔记和标签的多对多关系
+        -- 笔记-标签关联表，实现笔记和标签的多对多关系
         CREATE TABLE note_tags (
           note_id INTEGER NOT NULL,
           tag_id  INTEGER NOT NULL,
@@ -109,15 +111,19 @@ export const migrations: Migration[] = [
           FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
         );
 
-        // 全文搜索表，用于实现笔记的全文搜索功能
+        -- 全文搜索表，用于实现笔记的全文搜索功能
         CREATE VIRTUAL TABLE notes_fts USING fts5(
           title,
           content,
           content_rowid='note_id'
         );
 
-        // 初始化版本号
+        -- 初始化版本号
         INSERT INTO schema_version (version) VALUES (1);
+
+        -- 添加默认分类
+        INSERT INTO categories (id, name, icon, color) 
+        VALUES (1, '默认分类', 'folder', '#3498db');
       `);
     },
   },
