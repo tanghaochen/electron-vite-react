@@ -373,44 +373,55 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
     dataProvider,
   });
 
-  const handleItemDrop = (hyDrag, target) => {
-    /**
-     * @item 选中的被拖拽的元素
-     * @target drop拖拽结束的元素
-     */
-    console.log(
-      "拖拽结束:",
-      hyDrag,
-      "target:",
-      target,
-      "的",
-      target.linePosition,
-      target.parentItem,
-    );
-    const dropItemID =
-      target.parentItem === "root" ? "0" : target.parentItem || 0;
+  const handleItemDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    console.log("拖拽结束:", e);
 
-    if (!target.targetItem) {
-      hyDrag.forEach((item) => {
-        tagsdb.updateTag(item.index, {
-          parent_id: dropItemID,
+    try {
+      // 获取拖拽数据
+      const dragEleData = e.dataTransfer.getData("text/plain");
+      const dragData = JSON.parse(dragEleData);
+      console.log("拖拽数据:", dragData);
+
+      // 获取目标元素
+      const targetElement = e.target as HTMLElement;
+      if (!targetElement) {
+        console.error("未找到目标元素");
+        return;
+      }
+
+      // 找到最近的包含 data-rct-item-id 的元素
+      const itemElement = targetElement.closest("[data-rct-item-id]");
+      if (!itemElement) {
+        console.error("未找到标签元素");
+        return;
+      }
+
+      // 获取目标元素的 ID
+      const targetItemId = itemElement.getAttribute("data-rct-item-id");
+      console.log("目标元素ID:", targetItemId);
+
+      // 处理从 WorksBar 拖拽过来的项目
+      if (dragData.type === "worksItem") {
+        // 确保目标 ID 有效
+        if (!targetItemId) {
+          console.error("无效的目标元素ID");
+          return;
+        }
+
+        // 更新词库的分类
+        await worksListDB.updateMetadata(dragData.data.id, {
+          tags_id: targetItemId === "root" ? 0 : targetItemId,
         });
-      });
-    } else {
-      hyDrag.forEach((item) => {
-        tagsdb.updateTag(item.index, {
-          parent_id: target.targetItem,
-        });
-      });
+
+        // 更新本地状态
+        if (setWorksItem) {
+          setWorksItem(null); // 清空当前选中的词库
+        }
+        return;
+      }
+    } catch (error) {
+      console.error("处理拖拽失败:", error);
     }
-
-    console.log("dataProvider.dropList", dataProvider.dropList);
-    dataProvider.dropList.forEach((item, index) => {
-      console.log("item", item, index);
-      tagsdb.updateTag(item, {
-        sort_order: index,
-      });
-    });
   };
 
   const handleContextMenu = (event, item) => {
@@ -508,7 +519,12 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
   };
 
   return (
-    <div className="w-full h-full bg-stone-50">
+    <div
+      className="w-full h-full bg-stone-50"
+      onDrop={handleItemDrop}
+      onDragOver={(e) => e.preventDefault()}
+      onDragEnter={(e) => e.preventDefault()}
+    >
       <div className="content-center flex gap-2 py-2 text-zinc-500 justify-between px-2">
         <div className="font-bold p-2 w-full">分类标签</div>
         <Button
@@ -564,16 +580,25 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
           onSelectItems={(items) => {
             setSelectedItems(items);
           }}
-          renderItemTitle={(item) => (
-            <span
-              className="w-full h-full content-center text-base text-zinc-800 truncate"
-              onContextMenu={(e) => handleContextMenu(e, item)}
-            >
-              {item.title || "未命名标签"}
-            </span>
-          )}
+          renderItemTitle={(item) => {
+            return (
+              <span
+                className="w-full h-full content-center text-base text-zinc-800 truncate"
+                onContextMenu={(e) => handleContextMenu(e, item)}
+                data-tagsid={item.index}
+              >
+                {item.title || "未命名标签"}
+              </span>
+            );
+          }}
           onDragStart={(items, source) => {
             console.log("拖拽开始:", items, "来自:", source);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+          }}
+          onDragEnter={(e) => {
+            e.preventDefault();
           }}
           onDrop={handleItemDrop}
         >

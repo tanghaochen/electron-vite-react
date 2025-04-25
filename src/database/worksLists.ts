@@ -77,7 +77,7 @@ export const worksListDB = {
   updateMetadata: async (id, data) => {
     const validColumns = [
       "title",
-      "index",
+      "tags_id",
       "icon",
       "img",
       "desc",

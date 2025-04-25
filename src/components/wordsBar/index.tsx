@@ -119,10 +119,15 @@ export default function WorksBar({
     item: WorksListItem,
   ) => {
     setDraggedItem(item);
-    setTimeout(() => {
-      e.dataTransfer.effectAllowed = "move";
-    }, 0);
-    e.dataTransfer.setData("text/plain", item.id.toString());
+    // 设置拖拽数据
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData(
+      "text/plain",
+      JSON.stringify({
+        type: "worksItem",
+        data: item,
+      }),
+    );
   };
 
   const handleDragOver = (
@@ -375,10 +380,11 @@ export default function WorksBar({
                 worksItem={worksItem}
                 onAdd={handleAddWorksNote}
                 onDelete={handleDeleteWorksNote}
+                // onDrag={(e) => {
+                //   e.currentTarget.style.opacity = "0";
+                //   e.currentTarget.style.backgroundColor = "red";
+                // }}
                 onDragStart={handleDragStart}
-                onDragEnter={(e) => {
-                  e.preventDefault();
-                }}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
               />
