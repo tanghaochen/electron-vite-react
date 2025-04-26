@@ -107,7 +107,7 @@ export default function WorksBar({
     }
 
     return () => {
-      unsubscribe();
+      unsubscribe(); // 这里调用的是 addListener 返回的取消监听函数
     };
   }, [selectedTagItem?.index]);
 
@@ -228,7 +228,7 @@ export default function WorksBar({
       })) as WorksListItem;
 
       // 更新状态（带完整数据）
-      setWorksList([
+      const updatedWorksList = [
         ...worksList,
         {
           id: newItem.id,
@@ -236,7 +236,13 @@ export default function WorksBar({
           tags_id: newItem.tags_id,
           sort_order: worksList.length,
         },
-      ]);
+      ];
+
+      // 更新本地状态
+      setWorksList(updatedWorksList);
+
+      // 同步到 WorksStateManager
+      worksStateManager.updateWorksList(selectedTagItem.index);
     } catch (error: any) {
       console.error("创建失败:", error);
       alert(`创建失败: ${error.message}`);
@@ -280,7 +286,13 @@ export default function WorksBar({
         worksListDB.updateMetadata(item.id, { sort_order: item.sort_order });
       });
 
+      // 更新本地状态
       setWorksList(updatedList);
+
+      // 同步到 WorksStateManager
+      if (selectedTagItem?.index) {
+        worksStateManager.updateWorksList(selectedTagItem.index);
+      }
     } catch (error) {
       console.error("添加失败:", error);
     }

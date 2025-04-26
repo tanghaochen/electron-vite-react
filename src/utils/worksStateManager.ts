@@ -43,6 +43,7 @@ class WorksStateManager {
 
   // 从词库列表中移除指定ID的词库
   public removeWorksItem(itemId: number) {
+    console.log("移除词库", itemId, this.worksList);
     // 过滤掉指定ID的词库
     this.worksList = this.worksList.filter((item) => item.id !== itemId);
     // 通知所有监听器数据已更新
