@@ -374,7 +374,47 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
     dataProvider,
   });
 
-  const handleItemDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+  const handleItemDrop = (hyDrag, target) => {
+    /**
+     * @item 选中的被拖拽的元素
+     * @target drop拖拽结束的元素
+     */
+    console.log(
+      "拖拽结束:",
+      hyDrag,
+      "target:",
+      target,
+      "的",
+      target.linePosition,
+      target.parentItem,
+    );
+    const dropItemID =
+      target.parentItem === "root" ? "0" : target.parentItem || 0;
+
+    if (!target.targetItem) {
+      hyDrag.forEach((item) => {
+        tagsdb.updateTag(item.index, {
+          parent_id: dropItemID,
+        });
+      });
+    } else {
+      hyDrag.forEach((item) => {
+        tagsdb.updateTag(item.index, {
+          parent_id: target.targetItem,
+        });
+      });
+    }
+
+    console.log("dataProvider.dropList", dataProvider.dropList);
+    dataProvider.dropList.forEach((item, index) => {
+      console.log("item", item, index);
+      tagsdb.updateTag(item, {
+        sort_order: index,
+      });
+    });
+  };
+
+  const handleContainerDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     console.log("拖拽结束:", e);
 
     try {
@@ -525,7 +565,7 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
   return (
     <div
       className="w-full h-full bg-stone-50"
-      onDrop={handleItemDrop}
+      onDrop={handleContainerDrop}
       onDragOver={(e) => e.preventDefault()}
       onDragEnter={(e) => e.preventDefault()}
     >

@@ -82,16 +82,18 @@ export const migrations: Migration[] = [
 
         -- 笔记元数据表，存储笔记的基本信息
         CREATE TABLE notes_metadata (
-          id         INTEGER PRIMARY KEY AUTOINCREMENT,
-          tags_id    INTEGER NOT NULL DEFAULT 0,
-          title      TEXT NOT NULL DEFAULT '',
-          sort_order INTEGER DEFAULT 0,
-          icon       TEXT NOT NULL DEFAULT '',
-          img        TEXT NOT NULL DEFAULT '',
-          desc       TEXT NOT NULL DEFAULT '',
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          is_pinned  BOOLEAN DEFAULT 0
+          id             INTEGER PRIMARY KEY AUTOINCREMENT,
+          tags_id        INTEGER NOT NULL DEFAULT 0,
+          title          TEXT NOT NULL DEFAULT '',
+          sort_order     INTEGER DEFAULT 0,
+          icon           TEXT NOT NULL DEFAULT '',
+          img            TEXT NOT NULL DEFAULT '',
+          desc           TEXT NOT NULL DEFAULT '',
+          created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+          is_pinned      BOOLEAN DEFAULT 0,
+          is_archived    BOOLEAN DEFAULT 0,
+          last_viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
 
         -- 笔记内容表，存储笔记的具体内容
@@ -124,59 +126,6 @@ export const migrations: Migration[] = [
         -- 添加默认分类
         INSERT INTO categories (id, name, icon, color) 
         VALUES (1, '默认分类', 'folder', '#3498db');
-      `);
-    },
-  },
-  {
-    version: 2,
-    up: (db) => {
-      // 示例：添加新字段
-      db.exec(`
-        -- 第一步：添加不带默认值的列
-        ALTER TABLE notes_metadata ADD COLUMN is_archived BOOLEAN;
-        ALTER TABLE notes_metadata ADD COLUMN last_viewed_at DATETIME;
-        
-        -- 第二步：更新所有现有记录
-        UPDATE notes_metadata SET is_archived = 0 WHERE is_archived IS NULL;
-        UPDATE notes_metadata SET last_viewed_at = datetime('now') WHERE last_viewed_at IS NULL;
-      `);
-    },
-    down: (db) => {
-      // 回滚操作
-      db.exec(`
-        CREATE TABLE notes_metadata_backup AS SELECT id, tags_id, title, sort_order, icon, img, desc, created_at, updated_at, is_pinned FROM notes_metadata;
-        DROP TABLE notes_metadata;
-        ALTER TABLE notes_metadata_backup RENAME TO notes_metadata;
-      `);
-    },
-  },
-  {
-    version: 3,
-    up: (db) => {
-      // 添加notes_content表的updated_at字段
-      db.exec(`
-        -- 第一步：添加不带默认值的列
-        ALTER TABLE notes_content ADD COLUMN updated_at DATETIME;
-        
-        -- 第二步：更新所有现有记录的updated_at为当前时间
-        UPDATE notes_content SET updated_at = datetime('now') WHERE updated_at IS NULL;
-      `);
-    },
-    down: (db) => {
-      // 回滚操作：创建临时表，复制数据，删除原表，重命名临时表
-      db.exec(`
-        CREATE TABLE notes_content_backup AS 
-          SELECT note_id, content 
-          FROM notes_content;
-        DROP TABLE notes_content;
-        CREATE TABLE notes_content (
-          note_id INTEGER PRIMARY KEY,
-          content TEXT NOT NULL,
-          FOREIGN KEY (note_id) REFERENCES notes_metadata(id)
-        );
-        INSERT INTO notes_content (note_id, content)
-          SELECT note_id, content FROM notes_content_backup;
-        DROP TABLE notes_content_backup;
       `);
     },
   },
