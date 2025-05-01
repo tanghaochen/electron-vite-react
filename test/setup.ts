@@ -1,5 +1,7 @@
 // 设置测试环境
-import { vi } from "vitest";
+import { vi, expect, afterEach } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import { cleanup } from "@testing-library/react";
 
 // 模拟Electron的IPC
 vi.mock("electron", () => {
@@ -16,4 +18,7 @@ vi.mock("electron", () => {
   };
 });
 
-// 其他全局设置
+// 每个测试后清理
+afterEach(() => {
+  cleanup();
+});
