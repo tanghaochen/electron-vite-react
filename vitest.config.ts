@@ -1,6 +1,7 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  plugins: [react()],
   test: {
     root: __dirname,
     include: [
@@ -19,4 +20,5 @@ export default defineConfig({
       web: [/\.[jt]sx?$/],
     },
   },
+});
 });

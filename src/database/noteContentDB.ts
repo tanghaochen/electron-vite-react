@@ -11,6 +11,26 @@ export const noteContentDB = {
   },
 
   /**
+   * 创建新的笔记内容
+   * @param {string} content - HTML内容字符串
+   * @returns {Promise<number>} 返回新创建的笔记ID
+   */
+  create: async (content) => {
+    if (!content) throw new Error("content 不能为空");
+
+    // 自动序列化JSON对象
+    const contentString =
+      typeof content === "object" ? JSON.stringify(content) : content;
+
+    const result = await noteContentDB.query(
+      `INSERT INTO notes_content (content) VALUES (?) RETURNING note_id`,
+      [contentString],
+    );
+
+    return result[0].note_id;
+  },
+
+  /**
    * 创建/更新笔记内容（使用 INSERT OR REPLACE 实现upsert）
    * @param {number} noteId - 关联的元数据ID
    * @param {string} content - HTML内容字符串
