@@ -87,10 +87,17 @@ export default defineConfig(({ command }) => {
     clearScreen: false,
     test: {
       globals: true,
-      environment: "jsdom",
-      include: ["test/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+      environment: "node",
+      include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
       css: true,
       setupFiles: ["./test/setup.ts"],
+      deps: {
+        inline: ["electron", "better-sqlite3"],
+      },
+      // env: {
+      //   NODE_ENV: "test",
+      //   APP_ROOT: path.resolve(__dirname),
+      // },
     },
   };
 });

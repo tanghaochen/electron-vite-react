@@ -1,0 +1,63 @@
+import { beforeEach, expect } from "vitest";
+import { noteContentDB } from "../services/noteContentDB";
+import { app } from "electron";
+
+// 模拟 Electron 的 app 模块
+// jest.mock("electron", () => ({
+//   app: {
+//     getPath: jest.fn().mockReturnValue("test-data"),
+//   },
+// }));
+
+describe("noteContentDB", () => {
+  // beforeEach(() => {
+  //   // 在每个测试前清理数据库
+  //   noteContentDB.deleteContent(1);
+  // });
+
+  test("updateContent 应该能够创建和更新笔记内容", () => {
+    // 测试创建内容
+    noteContentDB.updateContent(1, "测试内容");
+    expect(noteContentDB.getContentByNoteId(1)).toBe("测试内容");
+
+    // 测试更新内容
+    noteContentDB.updateContent(1, "更新后的内容");
+    expect(noteContentDB.getContentByNoteId(1)).toBe("更新后的内容");
+  });
+
+  // test("updateContent 应该能够处理 JSON 对象", () => {
+  //   const testData = { title: "测试标题", content: "测试内容" };
+  //   noteContentDB.updateContent(1, testData);
+
+  //   const result = noteContentDB.getContentByNoteId(1, true);
+  //   expect(result).toEqual(testData);
+  // });
+
+  // test("getContentByNoteId 应该能够正确解析 JSON", () => {
+  //   const testData = { title: "测试标题", content: "测试内容" };
+  //   noteContentDB.updateContent(1, testData);
+
+  //   // 不解析 JSON
+  //   const rawContent = noteContentDB.getContentByNoteId(1);
+  //   expect(typeof rawContent).toBe("string");
+
+  //   // 解析 JSON
+  //   const parsedContent = noteContentDB.getContentByNoteId(1, true);
+  //   expect(parsedContent).toEqual(testData);
+  // });
+
+  // test("deleteContent 应该能够删除笔记内容", () => {
+  //   noteContentDB.updateContent(1, "测试内容");
+  //   expect(noteContentDB.exists(1)).toBe(true);
+
+  //   noteContentDB.deleteContent(1);
+  //   expect(noteContentDB.exists(1)).toBe(false);
+  // });
+
+  // test("exists 应该能够正确检查内容是否存在", () => {
+  //   expect(noteContentDB.exists(1)).toBe(false);
+
+  //   noteContentDB.updateContent(1, "测试内容");
+  //   expect(noteContentDB.exists(1)).toBe(true);
+  // });
+});

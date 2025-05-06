@@ -1,9 +1,22 @@
-import { defineConfig } from 'vitest/config'
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
     root: __dirname,
-    include: ['test/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
+    include: [
+      "src/test/**/*.tsx",
+      "src/**/__tests__/**/*.test.ts",
+      "electron/database/__tests__/**/*.test.ts",
+    ],
     testTimeout: 1000 * 29,
+    environment: "node",
+    globals: true,
+    // setupFiles: ["./test/setup.ts"],
+    // deps: {
+    //   // inline: ["electron", "better-sqlite3"],
+    // },
+    transformMode: {
+      web: [/\.[jt]sx?$/],
+    },
   },
-})
+});
