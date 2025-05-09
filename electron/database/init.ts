@@ -10,7 +10,7 @@
 // 导入必要的模块
 import path from "path";
 import { app } from "electron";
-import Database from "better-sqlite3";
+import Database, { Database as DatabaseType } from "./fix-imports.js";
 import fs from "fs";
 import { migrations } from "./migrations/index";
 import crypto from "crypto";
@@ -44,7 +44,7 @@ const BACKUP_CONFIG = {
 const dbPath = path.join(testDataPath, "notes.db");
 
 // 全局数据库实例变量
-let dbInstance: Database.Database | null = null;
+let dbInstance: ReturnType<typeof Database> | null = null;
 
 /**
  * 创建加密的数据库备份
@@ -100,7 +100,9 @@ export async function createBackup(backupName?: string): Promise<string> {
  */
 async function verifyBackupIntegrity(backupFilePath: string): Promise<void> {
   try {
-    const iv = await fs.promises.readFile(backupFilePath, { length: 16 });
+    // 读取前16字节作为IV
+    const buffer = await fs.promises.readFile(backupFilePath);
+    const iv = buffer.subarray(0, 16);
     const decipher = crypto.createDecipheriv(
       "aes-256-gcm",
       Buffer.from(BACKUP_CONFIG.encryptionKey, "hex"),
@@ -149,7 +151,8 @@ export async function restoreFromBackup(backupFilePath: string): Promise<void> {
   }
 
   // 读取IV
-  const iv = await fs.promises.readFile(backupFilePath, { length: 16 });
+  const buffer = await fs.promises.readFile(backupFilePath);
+  const iv = buffer.subarray(0, 16);
   const decipher = crypto.createDecipheriv(
     "aes-256-gcm",
     Buffer.from(BACKUP_CONFIG.encryptionKey, "hex"),
@@ -317,7 +320,7 @@ function verifyTables() {
   const tables = dbInstance
     .prepare("SELECT name FROM sqlite_master WHERE type='table'")
     .all()
-    .map((t) => t.name);
+    .map((t: { name: string }) => t.name);
 
   // 定义必需的表
   const requiredTables = [
@@ -361,11 +364,11 @@ export function debugDatabase() {
 
   console.log(
     "所有表:",
-    tables.map((t) => t.name),
+    tables.map((t: { name: string }) => t.name),
   );
 
   // 打印每个表的结构
-  tables.forEach((table) => {
+  tables.forEach((table: { name: string }) => {
     const columns = dbInstance
       .prepare(`PRAGMA table_info(${table.name})`)
       .all();

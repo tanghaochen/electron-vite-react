@@ -14,6 +14,7 @@ import { ImageManager } from "./services/ImageManager";
 import { DatabaseManager } from "./services/DatabaseManager";
 import { WindowManager } from "./services/WindowManager";
 import { ShortcutManager } from "./services/ShortcutManager";
+import { update } from "./update";
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -282,10 +283,6 @@ function setupAppEvents(
   windowManager: WindowManager,
   shortcutManager: ShortcutManager,
 ) {
-  app.on("will-quit", () => {
-    shortcutManager.unregisterAll();
-  });
-
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin") app.quit();
   });
@@ -293,18 +290,20 @@ function setupAppEvents(
   app.on("second-instance", () => {
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow) {
+      // Focus on the main window if the user tried to open another
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
   });
 
   app.on("activate", () => {
-    const allWindows = BrowserWindow.getAllWindows();
-    if (allWindows.length) {
-      allWindows[0].focus();
-    } else {
-      windowManager.createMainWindow();
-    }
+    const mainWindow = windowManager.getMainWindow();
+    if (mainWindow === null) windowManager.createMainWindow();
+  });
+
+  // 在关闭应用程序时释放资源
+  app.on("before-quit", () => {
+    shortcutManager.unregisterAll();
   });
 
   // 为所有创建的窗口添加最大化和还原事件监听
@@ -331,11 +330,28 @@ function installDevExtensions() {
 }
 
 // 启动应用
-app.whenReady().then(initApp);
+app
+  .whenReady()
+  .then(initApp)
+  .then(() => {
+    // 获取主窗口并启用更新功能
+    const mainWindow = BrowserWindow.getAllWindows()[0];
+    if (mainWindow) {
+      update(mainWindow);
+    }
+  });
 
 // 在创建窗口的代码中添加测试环境的处理
 function createWindow() {
-  // ...
+  const win = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      preload: path.join(__dirname, "../preload/index.mjs"),
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  });
 
   // 根据环境加载不同的URL
   if (process.env.VITE_DEV_SERVER_URL) {
@@ -348,8 +364,9 @@ function createWindow() {
     win.loadURL(testUrl);
   } else {
     // 生产环境
-    win.loadFile(path.join(process.env.DIST, "index.html"));
+    const distPath = path.join(__dirname, "../../dist/index.html");
+    win.loadFile(distPath);
   }
 
-  // ...
+  return win;
 }

@@ -3,7 +3,7 @@ import path from "path";
 
 export class WindowManager {
   private win: BrowserWindow | null = null;
-  private win2 = null;
+  private win2: BrowserWindow | undefined = undefined;
   private preload: string;
   private indexHtml: string;
   private viteDevServerUrl: string | undefined;
@@ -86,12 +86,12 @@ export class WindowManager {
     // 打开开发者工具
     this.win.webContents.openDevTools();
 
-    this.win.webContents.on("did-finish-load", () => {
-      this.win?.webContents.send(
-        "main-process-message",
-        new Date().toLocaleString(),
-      );
-    });
+    // this.win.webContents.on("did-finish-load", () => {
+    //   this.win?.webContents.send(
+    //     "main-process-message",
+    //     new Date().toLocaleString(),
+    //   );
+    // });
 
     // 设置链接处理
     this.win.webContents.setWindowOpenHandler(({ url }) => {

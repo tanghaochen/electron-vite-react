@@ -1,49 +1,6 @@
-import { contextBridge, ipcRenderer } from "electron";
-
-// 安全地暴露选定的 IPC 功能给渲染进程
-contextBridge.exposeInMainWorld("electronAPI", {
-  // 发送消息到主进程
-  send: (channel: string, data: any) => {
-    ipcRenderer.send(channel, data);
-  },
-
-  // 调用主进程方法并等待结果
-  invoke: (channel: string, ...args: any[]) => {
-    return ipcRenderer.invoke(channel, ...args);
-  },
-
-  // 监听主进程消息
-  receive: (channel: string, func: (...args: any[]) => void) => {
-    ipcRenderer.on(channel, (_, ...args) => func(...args));
-  },
-
-  // 监听一次性消息
-  receiveOnce: (channel: string, func: (...args: any[]) => void) => {
-    ipcRenderer.once(channel, (_, ...args) => func(...args));
-  },
-
-  // 移除特定频道上的所有监听器
-  removeAllListeners: (channel: string) => {
-    ipcRenderer.removeAllListeners(channel);
-  },
-});
-
-// --------- 以下是加载动画代码 ---------
-function domReady(
-  condition: DocumentReadyState[] = ["complete", "interactive"],
-) {
-  return new Promise((resolve) => {
-    if (condition.includes(document.readyState)) {
-      resolve(true);
-    } else {
-      document.addEventListener("readystatechange", () => {
-        if (condition.includes(document.readyState)) {
-          resolve(true);
-        }
-      });
-    }
-  });
-}
+/**
+ * 加载动画助手函数
+ */
 
 const safeDOM = {
   append(parent: HTMLElement, child: HTMLElement) {
@@ -64,7 +21,7 @@ const safeDOM = {
  * https://projects.lukehaas.me/css-loaders
  * https://matejkustec.github.io/SpinThatShit
  */
-function useLoading() {
+export function useLoading() {
   const className = `loaders-css__square-spin`;
   const styleContent = `
 @keyframes square-spin {
@@ -112,14 +69,3 @@ function useLoading() {
     },
   };
 }
-
-// ----------------------------------------------------------------------
-
-const { appendLoading, removeLoading } = useLoading();
-domReady().then(appendLoading);
-
-window.onmessage = (ev) => {
-  ev.data.payload === "removeLoading" && removeLoading();
-};
-
-setTimeout(removeLoading, 4999);

@@ -1,4 +1,5 @@
-import { initDatabase } from "../../database/init";
+import { initDatabase } from "../../database";
+import { IpcMain } from "electron";
 
 export class DatabaseManager {
   private db;
@@ -7,8 +8,8 @@ export class DatabaseManager {
     this.db = initDatabase();
   }
 
-  setupIpcHandlers(ipcMain) {
-    ipcMain.handle("db:query", async (_, sql, params) => {
+  setupIpcHandlers(ipcMain: IpcMain) {
+    ipcMain.handle("db:query", async (_, sql: string, params: any) => {
       try {
         const stmt = this.db.prepare(sql);
 
@@ -21,7 +22,7 @@ export class DatabaseManager {
             changes: result.changes,
           };
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("数据库错误:", err.message);
         throw new Error(`数据库错误: ${err.message}`);
       }

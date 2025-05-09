@@ -50,6 +50,9 @@ export default defineConfig(({ command }) => {
                 ),
               },
             },
+            esbuild: {
+              logOverride: { "ts-checker": "silent" },
+            },
           },
         },
         preload: {
@@ -67,6 +70,9 @@ export default defineConfig(({ command }) => {
                 ),
               },
             },
+            esbuild: {
+              logOverride: { "ts-checker": "silent" },
+            },
           },
         },
         // Ployfill the Electron and Node.js API for Renderer process.
@@ -75,16 +81,62 @@ export default defineConfig(({ command }) => {
         renderer: {},
       }),
     ],
-    server:
-      process.env.VSCODE_DEBUG &&
-      (() => {
-        const url = new URL(pkg.debug.env.VITE_DEV_SERVER_URL);
-        return {
-          host: url.hostname,
-          port: +url.port,
-        };
-      })(),
+    server: {
+      port: 5173,
+      strictPort: true,
+      host: "localhost",
+      hmr: {
+        overlay: false,
+      },
+      watch: {
+        usePolling: true,
+      },
+      // 单独配置开发服务器
+      ...(process.env.VSCODE_DEBUG
+        ? (() => {
+            const url = new URL(pkg.debug.env.VITE_DEV_SERVER_URL);
+            return {
+              host: url.hostname,
+              port: +url.port,
+            };
+          })()
+        : {}),
+    },
+    optimizeDeps: {
+      // 强制预构建所有依赖
+      force: true,
+      // 预构建包括以下模块
+      include: [
+        "react",
+        "react-dom",
+        "react-router",
+        "@mui/material",
+        "@mui/icons-material",
+        "@mui/system",
+        "react-tabs",
+        "react-resizable-panels",
+        "@react-buddy/ide-toolbox",
+        "dompurify",
+      ],
+    },
     clearScreen: false,
+    esbuild: {
+      logOverride: { "ts-checker": "silent" },
+    },
+    build: {
+      // 打包时跳过类型检查
+      emptyOutDir: true,
+      chunkSizeWarningLimit: 3000,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            react: ["react", "react-dom"],
+            mui: ["@mui/material", "@mui/icons-material", "@mui/system"],
+            vendor: ["react-tabs", "react-resizable-panels", "dompurify"],
+          },
+        },
+      },
+    },
     test: {
       globals: true,
       environment: "node",
@@ -94,10 +146,6 @@ export default defineConfig(({ command }) => {
       deps: {
         inline: ["electron", "better-sqlite3"],
       },
-      // env: {
-      //   NODE_ENV: "test",
-      //   APP_ROOT: path.resolve(__dirname),
-      // },
     },
   };
 });

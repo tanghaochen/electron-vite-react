@@ -10,7 +10,6 @@ import Stack from "@mui/material/Stack";
 import "@/assets/globalStyles.scss";
 import ComplextTree from "@/components/complexTree/index.tsx";
 import DocumentOutline from "@/components/documentOutline";
-import DatabaseTest from "@/test/DatabaseTest";
 
 interface TreeItemData {
   index: string;
@@ -40,7 +39,6 @@ function App() {
 
   return (
     <div className="App w-full flex-1 flex h-full absolute top-0 left-0 bottom-0">
-      <DatabaseTest />
       <div className="flex">
         {/*<NoteOutlineTree></NoteOutlineTree>*/}
         <div className="w-80 border-0 border-r-2 border-solid border-r-gray-300">
