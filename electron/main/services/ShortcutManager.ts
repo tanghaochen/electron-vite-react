@@ -18,7 +18,10 @@ export class ShortcutManager {
         if (win2 && !win2.isDestroyed()) {
           const clipboardContent = await this.getSelectedContent(clipboard);
           console.log("clipboardContent", clipboardContent);
-          win2.webContents.send("clipboard-update", clipboardContent);
+          win2.webContents.send("clipboard-update", {
+            event: "clipboard-update",
+            ...clipboardContent,
+          });
 
           if (!win2.isVisible()) {
             this.windowManager.showSecondaryWindowAtCursor();

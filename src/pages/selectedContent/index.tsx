@@ -339,7 +339,8 @@ const App = () => {
     };
   }, []);
 
-  const handleClipboardUpdate = useCallback((event: any, text: string) => {
+  const handleClipboardUpdate = useCallback((text: string) => {
+    console.log("handleClipboardUpdate:", text);
     const cleanText = text.text
       .replace(/\n{3,}/g, "\n")
       .replace(/^\n+|\n+$/g, "")
@@ -376,9 +377,10 @@ const App = () => {
 
   useEffect(() => {
     getWorksList();
-    window.ipcRenderer?.on("clipboard-update", (event: any, text: string) => {
+    window.ipcRenderer?.on("clipboard-update", (text: string) => {
+      console.log("收到剪贴板更新事件:", text);
       getWorksList();
-      handleClipboardUpdate(event, text);
+      handleClipboardUpdate(text);
     });
     return () => {
       window.ipcRenderer?.off?.("clipboard-update", handleClipboardUpdate);
