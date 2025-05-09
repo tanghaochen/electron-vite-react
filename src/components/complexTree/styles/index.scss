@@ -49,3 +49,17 @@
 .rct-tree-item-button:focus-visible {
   outline: none !important;
 }
+
+/* 添加三点菜单的样式 */
+.rct-tree-item-button {
+  &:hover {
+    .more-menu-icon {
+      opacity: 1;
+    }
+  }
+
+  .more-menu-icon {
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+}

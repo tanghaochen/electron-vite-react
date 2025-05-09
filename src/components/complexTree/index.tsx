@@ -13,6 +13,7 @@ import { nanoid } from "nanoid";
 import contextMenuEvents from "@/components/complexTree/libs/contextMenuEvents";
 import "./styles/index.scss";
 import AddIcon from "@mui/icons-material/Add";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { worksListDB } from "@/database/worksLists";
 import { preferencesDB } from "@/database/perferencesDB";
 import ReactDOM from "react-dom";
@@ -42,6 +43,7 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
   const [contextMenu, setContextMenu] = React.useState<{
     mouseX: number;
     mouseY: number;
+    targetItem?: string;
   } | null>(null);
 
   // 将数据库获取的数组数据转换为组件需要的结构
@@ -473,7 +475,6 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
     // event.stopPropagation();
     console.log("event,item", event, item);
     setContextMenu({
-      visible: true,
       mouseX: event.clientX,
       mouseY: event.clientY,
       targetItem: item.item.index, // store the item's ID (or the whole item if needed)
@@ -492,7 +493,7 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
           {...context.itemContainerWithoutChildrenProps}
           {...context.interactiveElementProps}
           onContextMenu={(e) => handleContextMenu(e, item)}
-          className="flex"
+          className="flex group"
         >
           {arrow} <span className="ml-4"> {title}</span>
         </InteractiveComponent>
@@ -608,6 +609,7 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
             },
           }}
           renderRenameInput={renderRenameInput}
+          // renderItem={renderItem}
           canRename={true}
           onFocusItem={(item) => setFocusedItem(item.index)}
           onCollapseItem={(item) =>
@@ -627,11 +629,23 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
           renderItemTitle={(item) => {
             return (
               <span
-                className="w-full h-full content-center text-base text-zinc-800 truncate"
+                className="w-full h-full content-center text-base text-zinc-800 truncate flex justify-between items-center"
                 onContextMenu={(e) => handleContextMenu(e, item)}
                 data-tagsid={item.index}
               >
-                {item.title || "未命名标签"}
+                <span className="truncate">{item.title || "未命名标签"}</span>
+                <MoreVertIcon
+                  fontSize="small"
+                  className="text-gray-500 cursor-pointer more-menu-icon hover:text-gray-700"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setContextMenu({
+                      mouseX: e.clientX,
+                      mouseY: e.clientY,
+                      targetItem: item.index,
+                    });
+                  }}
+                />
               </span>
             );
           }}
@@ -661,6 +675,7 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
         onAdd={useContextMenuEvents.handleAddItem}
         onFind={useContextMenuEvents.handleFindItem}
         contextMenu={contextMenu}
+        anchorEl={null}
       />
     </div>
   );

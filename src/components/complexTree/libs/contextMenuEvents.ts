@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import {tagsdb} from "@/database/tagsdb";
+import { tagsdb } from "@/database/tagsdb";
 
 export default function contextMenuEvents({
   contextMenu,
@@ -17,7 +17,7 @@ export default function contextMenuEvents({
     if (!contextMenu?.targetItem) return;
     // 调用自定义 dataProvider 的 injectItem 方法：
     dataProvider.injectItem(contextMenu.targetItem);
-    console.log('contextMenu', contextMenu)
+    console.log("contextMenu", contextMenu);
   };
 
   const handleEditItem = (e) => {
@@ -49,7 +49,6 @@ export default function contextMenuEvents({
     // event.stopPropagation();
     console.log("event,item", event, item);
     setContextMenu({
-      visible: true,
       mouseX: event.clientX,
       mouseY: event.clientY,
       targetItem: item.item.index, // store the item's ID (or the whole item if needed)
