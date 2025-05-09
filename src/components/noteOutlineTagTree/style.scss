@@ -3,32 +3,35 @@
 }
 
 .element {
-  box-shadow: 0 -1px 0 0 rgba(0, 0, 0, 0.1), /* 上边 */
-  1px 0 0 0 rgba(0, 0, 0, 0.1), /* 右边 */
-  0 1px 0 0 rgba(0, 0, 0, 0.1), /* 下边 */
-  -1px 0 0 0 rgba(0, 0, 0, 0.1); /* 左边 */
+  box-shadow: 0 -1px 0 0 rgba(0, 0, 0, 0.1),
+    /* 上边 */ 1px 0 0 0 rgba(0, 0, 0, 0.1),
+    /* 右边 */ 0 1px 0 0 rgba(0, 0, 0, 0.1),
+    /* 下边 */ -1px 0 0 0 rgba(0, 0, 0, 0.1); /* 左边 */
 }
 
 .drag-start-element {
   opacity: 1;
   //border: 1px dashed #000;
 }
-.css-1gly1zq-MuiTreeItem2-content.Mui-focused, .css-1gly1zq-MuiTreeItem2-content.Mui-selected, .css-1gly1zq-MuiTreeItem2-content.Mui-selected.Mui-focused{
-  background-color: #EFF0F0 !important;
+.css-1gly1zq-MuiTreeItem2-content.Mui-focused,
+.css-1gly1zq-MuiTreeItem2-content.Mui-selected,
+.css-1gly1zq-MuiTreeItem2-content.Mui-selected.Mui-focused {
+  background-color: #eff0f0 !important;
   font-weight: bold !important;
   color: black !important;
 }
 
-.Mui-selected{
-  background-color: #EFF0F0 !important;
+.Mui-selected {
+  background-color: #eff0f0 !important;
   font-weight: bold !important;
   color: black !important;
 }
-.css-cnvgiu-MuiTreeItem2-root:hover{
+.css-cnvgiu-MuiTreeItem2-root:hover {
   color: black;
 }
-.drop-border-top::before, .drop-border-top::after {
-  content: '';
+.drop-border-top::before,
+.drop-border-top::after {
+  content: "";
   position: absolute;
   background-color: rgba(0, 0, 0, 1); /* 边框颜色 */
 }
@@ -37,11 +40,12 @@
   top: 0;
   left: 0;
   right: 0;
-  height: .4rem; /* 上边框 */
+  height: 0.4rem; /* 上边框 */
 }
 
-.drop-border-bottom::before, .drop-border-bottom::after {
-  content: '';
+.drop-border-bottom::before,
+.drop-border-bottom::after {
+  content: "";
   position: absolute;
   background-color: rgba(0, 0, 0, 1); /* 边框颜色 */
 }
@@ -51,19 +55,33 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: .4rem; /* 下边框 */
+    height: 0.4rem; /* 下边框 */
   }
 }
 
 .drop-border-middle {
-  background: rgba(61, 127, 255, .2);
-  box-shadow: 0 -1px 0 0 rgba(0, 0, 0, 0.1), /* 上边 */
-  1px 0 0 0 rgba(0, 0, 0, 0.1), /* 右边 */
-  0 1px 0 0 rgba(0, 0, 0, 0.1), /* 下边 */
-  -1px 0 0 0 rgba(0, 0, 0, 0.1); /* 左边 */
+  background: rgba(61, 127, 255, 0.2);
+  box-shadow: 0 -1px 0 0 rgba(0, 0, 0, 0.1),
+    /* 上边 */ 1px 0 0 0 rgba(0, 0, 0, 0.1),
+    /* 右边 */ 0 1px 0 0 rgba(0, 0, 0, 0.1),
+    /* 下边 */ -1px 0 0 0 rgba(0, 0, 0, 0.1); /* 左边 */
 }
 
 input {
   //z-index: 9999;
   //position: relative;
+}
+/* 自定义菜单样式 */
+.MuiMenuItem-root {
+  padding: 4px 8px !important;
+  min-height: 34px !important;
+
+  .MuiListItemIcon-root {
+    margin-right: 4px !important;
+    min-width: 24px !important;
+  }
+
+  .MuiTypography-root {
+    line-height: 1 !important;
+  }
 }
