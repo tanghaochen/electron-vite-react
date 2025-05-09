@@ -55,11 +55,29 @@
   &:hover {
     .more-menu-icon {
       opacity: 1;
+      visibility: visible !important;
     }
   }
 
   .more-menu-icon {
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity 0.2s, visibility 0.2s;
+
+    &.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    &.hidden {
+      visibility: hidden;
+    }
+  }
+}
+
+/* 激活状态的项目样式 */
+.active-item {
+  .more-menu-icon {
+    opacity: 1;
+    visibility: visible;
   }
 }

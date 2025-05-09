@@ -573,19 +573,16 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
       <div className="content-center flex gap-2 py-2 text-zinc-500 justify-between px-2">
         <div className="font-bold p-2 w-full">分类标签</div>
         <Button
-          color="inherit"
+          color="#000000"
           size="small"
           style={{
             backgroundColor: "white",
             border: "1px solid #E0E0E0",
-            padding: "2px",
-            minWidth: "28px",
-            height: "28px",
           }}
-          className="my-auto"
+          className="my-auto size-8 flex-shrink-0"
           onClick={handleAddTagsItem}
         >
-          <AddIcon sx={{ fontSize: "0.8rem" }} />
+          <AddIcon fontSize="small" />
         </Button>
       </div>
       {isLoading ? (
@@ -639,7 +636,7 @@ export default function complexTree({ onSelectedTagChange, setWorksItem }) {
                 <span className="truncate">{item.title || "未命名标签"}</span>
                 <MoreVertIcon
                   fontSize="small"
-                  sx={{ fontSize: "0.8rem" }}
+                  // sx={{ fontSize: "0.8rem" }}
                   className="text-gray-500 cursor-pointer more-menu-icon hover:text-gray-700"
                   onClick={(e) => {
                     e.stopPropagation();

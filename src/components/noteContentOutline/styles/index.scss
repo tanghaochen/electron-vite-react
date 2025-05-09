@@ -30,3 +30,15 @@
   border-top: 1px solid #e0e0e0;
   overflow: hidden;
 }
+
+.custom-tab-content {
+  // hover tab组件显示关闭按钮
+  // .custom-close-button {
+  //   opacity: 0;
+  //   transition: opacity 0.2s ease;
+  // }
+
+  // &:hover .custom-close-button {
+  //   opacity: 1;
+  // }
+}

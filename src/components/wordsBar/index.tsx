@@ -315,7 +315,7 @@ export default function WorksBar({
           <span className="truncate">{worksListTitle || "未命名标签"}</span>
         </div>
         <Button
-          variant="contained"
+          // variant="contained"
           size="small"
           style={{
             backgroundColor: "#F5F5F5",

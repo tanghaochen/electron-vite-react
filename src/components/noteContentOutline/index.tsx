@@ -250,8 +250,10 @@ export default function BasicTabs({
                   onDrop={(e) => handleDrop(e, index)}
                 >
                   <span>{tab.label || "未命名"}</span>
+                  {/* 关闭按钮: 处于active状态时显示 */}
                   <IconButton
                     size="small"
+                    className="custom-close-button"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleCloseTab(tab.value, e);
