@@ -3,8 +3,8 @@
  * 用于导出数据库相关功能
  */
 
-// 导出简化版数据库（开发阶段使用）
-export * from "./simple-db";
+// 导出真实数据库初始化模块
+export * from "./init";
 
-// 在实际生产环境中，可以切换回原来的数据库模块
-// export * from './init';
+// 在开发阶段可以使用简化版数据库
+// export * from "./simple-db";
