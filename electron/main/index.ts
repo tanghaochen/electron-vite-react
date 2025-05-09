@@ -14,6 +14,7 @@ import { ImageManager } from "./services/ImageManager";
 import { DatabaseManager } from "./services/DatabaseManager";
 import { WindowManager } from "./services/WindowManager";
 import { ShortcutManager } from "./services/ShortcutManager";
+import { TrayManager } from "./services/TrayManager";
 import { update } from "./update";
 
 const require = createRequire(import.meta.url);
@@ -45,6 +46,15 @@ if (!app.requestSingleInstanceLock()) {
 const preload = path.join(__dirname, "../preload/index.mjs");
 const indexHtml = path.join(RENDERER_DIST, "index.html");
 
+// 为 app 扩展类型，添加 isQuitting 属性
+declare global {
+  namespace Electron {
+    interface App {
+      isQuitting?: boolean;
+    }
+  }
+}
+
 // 应用程序初始化
 async function initApp() {
   // 创建服务实例
@@ -56,18 +66,38 @@ async function initApp() {
     VITE_DEV_SERVER_URL,
   );
   const shortcutManager = new ShortcutManager(windowManager);
+  const trayManager = new TrayManager();
 
   // 设置IPC处理程序
   setupIpcHandlers(imageManager, dbManager, windowManager);
 
   // 创建主窗口
   await windowManager.createMainWindow();
+  const mainWindow = windowManager.getMainWindow();
 
   // 设置全局快捷键
   shortcutManager.setupGlobalShortcuts();
 
+  // 创建系统托盘
+  const iconPath = path.join(process.env.VITE_PUBLIC, "favicon.ico");
+  if (mainWindow) {
+    trayManager.createTray(iconPath, mainWindow);
+
+    // 修改窗口关闭行为，点击关闭时隐藏窗口而不是退出应用
+    mainWindow.on("close", (event) => {
+      if (!app.isQuitting) {
+        event.preventDefault();
+        mainWindow.hide();
+        return false;
+      }
+      return true;
+    });
+  } else {
+    trayManager.createTray(iconPath);
+  }
+
   // 设置应用程序事件
-  setupAppEvents(windowManager, shortcutManager);
+  setupAppEvents(windowManager, shortcutManager, trayManager);
 
   // 安装开发工具扩展
   if (VITE_DEV_SERVER_URL) {
@@ -282,9 +312,14 @@ function setupIpcHandlers(
 function setupAppEvents(
   windowManager: WindowManager,
   shortcutManager: ShortcutManager,
+  trayManager: TrayManager,
 ) {
   app.on("window-all-closed", () => {
-    if (process.platform !== "darwin") app.quit();
+    // 如果不是Mac平台，不做任何事情
+    // 现在由托盘控制退出
+    if (process.platform !== "darwin") {
+      // 不调用app.quit()，让托盘管理应用退出
+    }
   });
 
   app.on("second-instance", () => {
@@ -292,6 +327,7 @@ function setupAppEvents(
     if (mainWindow) {
       // Focus on the main window if the user tried to open another
       if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
       mainWindow.focus();
     }
   });
@@ -303,7 +339,10 @@ function setupAppEvents(
 
   // 在关闭应用程序时释放资源
   app.on("before-quit", () => {
+    // 标记应用正在退出，允许窗口关闭
+    app.isQuitting = true;
     shortcutManager.unregisterAll();
+    trayManager.destroyTray();
   });
 
   // 为所有创建的窗口添加最大化和还原事件监听
