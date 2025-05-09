@@ -16,6 +16,7 @@ import HightlightComp from "@/components/richNote/subComponents/highlight";
 import { worksListDB } from "@/database/worksLists";
 import HeadingSelector from "@/components/richNote/subComponents/headingSelector";
 import TpTable from "../tpTable";
+import { wrap } from "../../../../../node_modules/.vite/deps_temp_2e98178c/lodash-es";
 
 const MenuBar = ({
   setTabs,
@@ -113,7 +114,7 @@ const MenuBar = ({
 
   return (
     <div className="control-group sticky top-0 z-10 bg-white">
-      <div className="button-group inline-flex justify-start align-middle overflow-auto">
+      <div className="button-group inline-flex justify-start align-middle overflow-auto flex-wrap">
         <HeadingSelector editor={editor} />
 
         {extTypeList.map((item, index) => {

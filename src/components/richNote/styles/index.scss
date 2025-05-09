@@ -251,6 +251,12 @@
     height: 0;
     pointer-events: none;
   }
+
+  /* 当同时具有is-empty和node-codeBlock类时，不显示placeholder内容 */
+  .is-empty.node-codeBlock::before {
+    content: none;
+  }
+
   /* Task list specific styles */
   ul[data-type="taskList"] {
     list-style: none;

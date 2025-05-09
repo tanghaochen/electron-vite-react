@@ -242,7 +242,7 @@ export default function BasicTabs({
               )}
               <div className="relative flex">
                 <div
-                  className="custom-tab-content"
+                  className="custom-tab-content group"
                   draggable
                   onDragStart={(e) => handleDragStart(e, index)}
                   onDragOver={(e) => handleDragOver(e, index)}
@@ -250,10 +250,12 @@ export default function BasicTabs({
                   onDrop={(e) => handleDrop(e, index)}
                 >
                   <span>{tab.label || "未命名"}</span>
-                  {/* 关闭按钮: 处于active状态时显示 */}
+                  {/* 关闭按钮: 默认隐藏，hover或active时显示 */}
                   <IconButton
                     size="small"
-                    className="custom-close-button"
+                    className={`custom-close-button ${
+                      selectedIndex === index ? "visible" : "invisible"
+                    } group-hover:visible`}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleCloseTab(tab.value, e);
