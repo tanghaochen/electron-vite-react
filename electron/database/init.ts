@@ -17,9 +17,21 @@ import crypto from "crypto";
 import { createGzip } from "zlib";
 import { pipeline } from "stream/promises";
 
-// 确保testdata目录存在
-// 这个目录用于存储数据库文件
-const testDataPath = path.resolve("testdata");
+// 根据环境确定数据库存储路径
+const getDatabasePath = () => {
+  if (process.env.NODE_ENV === "development") {
+    // 开发环境：使用项目根目录下的 testdata
+    return path.resolve("testdata");
+  } else {
+    // 生产环境：使用系统文档目录
+    const appName = "CPNotes"; // 您的应用名称
+    const userDataPath = path.join(app.getPath("documents"), appName);
+    return userDataPath;
+  }
+};
+
+// 确保数据库目录存在
+const testDataPath = getDatabasePath();
 if (!fs.existsSync(testDataPath)) {
   fs.mkdirSync(testDataPath, { recursive: true });
 }
