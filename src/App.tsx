@@ -10,6 +10,7 @@ import Stack from "@mui/material/Stack";
 import "@/assets/globalStyles.scss";
 import ComplextTree from "@/components/complexTree/index.tsx";
 import DocumentOutline from "@/components/documentOutline";
+import UpdateNotification from "./components/UpdateNotification";
 
 interface TreeItemData {
   index: string;
@@ -74,6 +75,9 @@ function App() {
           richTextEditorEleRef={richTextEditorEleRef}
         />
       </div>
+
+      {/* 更新通知组件 */}
+      <UpdateNotification />
     </div>
   );
 }

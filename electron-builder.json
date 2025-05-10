@@ -50,7 +50,9 @@
     {
       "provider": "github",
       "owner": "your-github-username",
-      "repo": "electron-vite-react"
+      "repo": "electron-vite-react",
+      "private": false,
+      "releaseType": "release"
     }
   ]
 }
