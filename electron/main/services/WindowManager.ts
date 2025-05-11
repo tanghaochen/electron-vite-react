@@ -68,7 +68,12 @@ export class WindowManager {
       this.win.loadURL(this.viteDevServerUrl);
       this.win.webContents.openDevTools();
     } else {
-      this.win.loadFile(this.indexHtml);
+      // 检查路径格式，如果是带有协议的URL则使用loadURL，否则使用loadFile
+      if (this.indexHtml.startsWith("file://")) {
+        this.win.loadURL(this.indexHtml);
+      } else {
+        this.win.loadFile(this.indexHtml);
+      }
     }
 
     // 加载扩展
@@ -178,8 +183,18 @@ export class WindowManager {
       });
 
       this.win2.webContents.openDevTools();
-      if (this.viteDevServerUrl)
+      if (this.viteDevServerUrl) {
         this.win2.loadURL(this.viteDevServerUrl + "dashboard");
+      } else {
+        // 对于dashboard路径，在非开发环境下也使用正确的方法加载
+        if (this.indexHtml.startsWith("file://")) {
+          const url =
+            this.indexHtml.replace(/index\.html$/, "") + "#/dashboard";
+          this.win2.loadURL(url);
+        } else {
+          this.win2.loadFile(this.indexHtml, { hash: "dashboard" });
+        }
+      }
       this.win2.on("closed", () => {
         this.win2 = undefined;
         if (mouseLeaveTimeout) {
@@ -223,7 +238,12 @@ export class WindowManager {
     if (this.viteDevServerUrl) {
       childWindow.loadURL(`${this.viteDevServerUrl}#${hash}`);
     } else {
-      childWindow.loadFile(this.indexHtml, { hash });
+      // 根据路径格式选择正确的加载方法
+      if (this.indexHtml.startsWith("file://")) {
+        childWindow.loadURL(`${this.indexHtml}#${hash}`);
+      } else {
+        childWindow.loadFile(this.indexHtml, { hash });
+      }
     }
 
     return childWindow;

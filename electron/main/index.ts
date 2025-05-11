@@ -46,6 +46,17 @@ if (!app.requestSingleInstanceLock()) {
 const preload = path.join(__dirname, "../preload/index.mjs");
 const indexHtml = path.join(RENDERER_DIST, "index.html");
 
+// 添加一个辅助函数来获取正确的HTML路径
+function getHtmlPath() {
+  // 如果是开发环境，使用开发服务器URL
+  if (VITE_DEV_SERVER_URL) {
+    return VITE_DEV_SERVER_URL;
+  }
+
+  // 否则使用打包后的HTML文件路径
+  return `file://${indexHtml}`;
+}
+
 // 为 app 扩展类型，添加 isQuitting 属性
 declare global {
   namespace Electron {
@@ -62,7 +73,7 @@ async function initApp() {
   const dbManager = new DatabaseManager();
   const windowManager = new WindowManager(
     preload,
-    indexHtml,
+    getHtmlPath(), // 使用辅助函数获取HTML路径
     VITE_DEV_SERVER_URL,
   );
   const shortcutManager = new ShortcutManager(windowManager);

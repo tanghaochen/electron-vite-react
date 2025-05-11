@@ -8,7 +8,7 @@ import "./index.css";
 import "./demos/ipc";
 import { DevSupport } from "@react-buddy/ide-toolbox";
 import { ComponentPreviews, useInitial } from "@/dev";
-import { BrowserRouter, Route, Routes } from "react-router";
+import { HashRouter, Route, Routes } from "react-router-dom";
 // 导入 IPC 兼容层确保旧代码可以正常工作
 import "./utils/ipc-compat";
 import SelectedContent from "@/pages/selectedContent";
@@ -18,7 +18,7 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
       ComponentPreviews={ComponentPreviews}
       useInitialHook={useInitial}
     >
-      <BrowserRouter>
+      <HashRouter>
         <Routes>
           <Route path="/" element={<App />} />
           <Route path="/dashboard" element={<SelectedContent />}>
@@ -26,7 +26,7 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
             {/*<Route path="project/:id" element={<Project />} />*/}
           </Route>
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
     </DevSupport>
   </React.StrictMode>,
 );
