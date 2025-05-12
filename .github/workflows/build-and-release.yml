@@ -11,14 +11,7 @@ on:
 jobs:
   version-and-release:
     name: 更新版本并发布
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest]
-        # 如果需要支持多平台，可以改为：
-        # os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: windows-latest # 固定使用Windows构建
 
     steps:
       - name: 检出代码
@@ -94,33 +87,39 @@ jobs:
       - name: 安装依赖
         run: pnpm install
 
-      - name: 构建应用
+      - name: 构建 Windows 应用
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm run build
+        run: pnpm run build:win
+
+      - name: 检查构建文件
+        shell: pwsh
+        run: |
+          # 列出release目录内容
+          Get-ChildItem -Path ./release -Recurse | Format-Table -AutoSize
+
+          # 找出最新版本目录
+          $versionDir = Get-ChildItem -Path ./release -Directory | Sort-Object -Descending | Select-Object -First 1
+          echo "构建目录: $($versionDir.FullName)"
+
+          # 列出构建文件
+          Get-ChildItem -Path $versionDir.FullName | Format-Table Name, Length -AutoSize
 
       - name: 发布到 GitHub Releases
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            release/**/*.exe
+            release/**/*_${{ steps.version.outputs.NEW_VERSION }}.exe
             release/**/*.yml
             release/**/*.exe.blockmap
-            # 如果需要支持其他平台，取消下面注释
-            # release/**/*.dmg
-            # release/**/*.AppImage
-            # release/**/*.deb
-            # release/**/*.zip
           tag_name: v${{ steps.version.outputs.NEW_VERSION }}
           name: 版本 v${{ steps.version.outputs.NEW_VERSION }}
           body: |
             ## 版本 v${{ steps.version.outputs.NEW_VERSION }}
 
-            此版本由 GitHub Actions 自动构建并发布
-
             ### 下载说明
 
-            - ElectronViteReact_${{ steps.version.outputs.NEW_VERSION }}.exe: 主安装程序，下载此文件安装应用
+            - **Windows 用户**: 下载 **ElectronViteReact_${{ steps.version.outputs.NEW_VERSION }}.exe** 文件并安装
 
             ### 更新内容
 
