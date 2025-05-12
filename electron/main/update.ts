@@ -22,6 +22,14 @@ export function update(win: Electron.BrowserWindow) {
   autoUpdater.allowDowngrade = false; // 不允许降级
   autoUpdater.allowPrerelease = false; // 默认不使用预发布版本
 
+  // 如果使用GitHub作为更新服务器，配置token以避免API速率限制
+  if (process.env.GH_TOKEN) {
+    log.info("配置 GitHub Token");
+    autoUpdater.requestHeaders = {
+      Authorization: `token ${process.env.GH_TOKEN}`,
+    };
+  }
+
   // 检查更新日志
   autoUpdater.on("checking-for-update", () => {
     log.info("正在检查更新...");

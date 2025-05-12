@@ -49,10 +49,8 @@
   "publish": [
     {
       "provider": "github",
-      "owner": "your-github-username",
-      "repo": "electron-vite-react",
-      "private": false,
-      "releaseType": "release"
+      "owner": "tanghaochen",
+      "repo": "electron-vite-react"
     }
   ]
 }

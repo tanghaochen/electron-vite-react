@@ -1,0 +1,131 @@
+name: 自动更新版本并发布
+
+on:
+  push:
+    branches:
+      - main # 当推送到main分支时触发
+    paths-ignore:
+      - "**/*.md" # 忽略markdown文件变更
+      - "package.json" # 忽略package.json的变更，避免版本提交后再次触发
+
+jobs:
+  version-and-release:
+    name: 更新版本并发布
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        # 如果需要支持多平台，可以改为：
+        # os: [windows-latest, macos-latest, ubuntu-latest]
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # 获取完整历史以便正确生成版本号
+
+      - name: 自动生成新版本号
+        id: version
+        run: |
+          # 获取当前package.json中的版本号
+          $currentVersion = (Get-Content -Raw -Path package.json | ConvertFrom-Json).version
+
+          # 解析版本号
+          $major, $minor, $patch = $currentVersion.Split('.')
+
+          # 增加补丁版本号
+          $newPatch = [int]$patch + 1
+          $newVersion = "$major.$minor.$newPatch"
+
+          # 更新package.json中的版本号
+          $packageJson = Get-Content -Raw -Path package.json | ConvertFrom-Json
+          $packageJson.version = $newVersion
+          $packageJson | ConvertTo-Json -Depth 100 | Set-Content -Path package.json -Encoding UTF8
+
+          # 输出新版本号供后续步骤使用
+          echo "NEW_VERSION=$newVersion" >> $env:GITHUB_OUTPUT
+          echo "新版本号: $newVersion"
+        shell: pwsh
+
+      - name: 配置Git用户
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: 提交版本更新
+        run: |
+          git add package.json
+          git commit -m "chore: 发布 v${{ steps.version.outputs.NEW_VERSION }}"
+          git tag v${{ steps.version.outputs.NEW_VERSION }}
+
+      - name: 推送更改和标签
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+          tags: true
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: 安装 PNPM
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: 获取 PNPM 存储目录
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v3
+        name: 设置 PNPM 缓存
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: 安装依赖
+        run: pnpm install
+
+      - name: 构建应用
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm run build
+
+      - name: 发布到 GitHub Releases
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release/**/*.exe
+            release/**/*.yml
+            release/**/*.exe.blockmap
+            # 如果需要支持其他平台，取消下面注释
+            # release/**/*.dmg
+            # release/**/*.AppImage
+            # release/**/*.deb
+            # release/**/*.zip
+          tag_name: v${{ steps.version.outputs.NEW_VERSION }}
+          name: 版本 v${{ steps.version.outputs.NEW_VERSION }}
+          body: |
+            ## 版本 v${{ steps.version.outputs.NEW_VERSION }}
+
+            此版本由 GitHub Actions 自动构建并发布
+
+            ### 下载说明
+
+            - ElectronViteReact_${{ steps.version.outputs.NEW_VERSION }}.exe: 主安装程序，下载此文件安装应用
+
+            ### 更新内容
+
+            - 包含最新代码变更
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
